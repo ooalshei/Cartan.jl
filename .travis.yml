@@ -5,6 +5,10 @@ notifications:
 julia:
   - 1.11
   - nightly
+matrix:
+  allow_failures:
+    - julia: nightly
+  fast_finish: true
 os:
   - linux
   - osx
