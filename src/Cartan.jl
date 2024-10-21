@@ -1,5 +1,7 @@
 module Cartan
 
-# Write your package code here.
+include("pauli_operations.jl")
+
+export product
 
 end
