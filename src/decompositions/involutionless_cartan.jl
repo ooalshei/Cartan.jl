@@ -30,15 +30,14 @@ function _flag_pauliprod(string1::Vector{Int8},
 end
 
 function _flag_dla(algebra::Matrix{Int8}, string1::Vector{Int8}, iter)::Matrix{Int8}
-    result = Matrix{Int8}(undef, length(string1), 0)
+    # result = Matrix{Int8}(undef, length(string1), 0)
+    result = Vector{Int8}(undef, 0)
     for j in iter
         string, _, c = _flag_pauliprod(string1, algebra[:, j])
-        # if !c
-        #     (string in eachcol(algebra)) || (result = [result string])
-        # end
-        c || (result = [result string])
+        # c || (result = [result string])
+        c || append!(result, string)
     end
-    return unique(result, dims=2)
+    return unique(reshape(result, length(string1), :), dims=2)
 end
 
 function involutionlessdecomp(strings::Matrix{Int8})::Dict
@@ -49,7 +48,6 @@ function involutionlessdecomp(strings::Matrix{Int8})::Dict
     """
     n, finalind = size(strings)
     algebra = Int8[strings; 5 * ones(Int8, 1, size(strings, 2))]
-    # println(size(algebra))
     initialind = 1
     contradiction = false
     while true
@@ -60,16 +58,10 @@ function involutionlessdecomp(strings::Matrix{Int8})::Dict
                 Threads.@spawn _flag_dla(algebra, algebra[:, i], chunk)
             end
             tasks = fetch.(tasks)
-            # println(tasks)
             flag_results = setdiff(tasks, [Matrix{Int8}(undef, n + 1, 0)])
-            # println(flag_results)
             flag_results = unique(hcat(flag_results...), dims=2)
             results = unique(flag_results[1:end-1, :], dims=2)
             size(results, 2) == size(flag_results, 2) || (contradiction = true)
-            # println(size(algebra))
-            # println(size(flag_results, 2))
-            # println(algebra)
-            # println(flag_results)
             size(flag_results, 1) == size(algebra, 1) && (algebra = unique([algebra flag_results], dims=2))
             
         end

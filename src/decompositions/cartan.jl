@@ -169,14 +169,17 @@ function hamiltonian(model::String, n::Int, couplings::Vector{Float64}=[1.0]; pb
 end
 
 function _dla(algebra::Matrix{Int8}, string1::Vector{Int8}, iter)::Matrix{Int8}
-    result = Matrix{Int8}(undef, length(string1), 0)
+    # result = Matrix{Int8}(undef, length(string1), 0)
+    result = Vector{Int8}(undef, 0)
     for j in iter
         string, _, c = pauliprod(string1, algebra[:, j])
-        if !c
-            string in eachcol(algebra) || (result = [result string])
-        end
+        # if !c
+        #     string in eachcol(algebra) || (result = [result string])
+        # end
+        c || append!(result, string)
     end
-    return result
+    # return result
+    return unique(reshape(result, length(string1), :), dims=2)
 end
 
 function dla(strings::Matrix{Int8})::Matrix{Int8}
@@ -197,9 +200,10 @@ function dla(strings::Matrix{Int8})::Matrix{Int8}
                 Threads.@spawn _dla(algebra, algebra[:, i], chunk)
             end
             results = setdiff(fetch.(tasks), [Matrix{Int8}(undef, n, 0)])
-            for result in results
-                result[:, 1] in algebra || (algebra = [algebra result[:, 1]])
-            end
+            # for result in results
+            #     result[:, 1] in algebra || (algebra = [algebra result[:, 1]])
+            # end
+            algebra = unique([algebra results...], dims=2)
         end
         finalind == size(algebra, 2) && return algebra
         initialind = finalind + 1
