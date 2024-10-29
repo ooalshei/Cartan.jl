@@ -18,7 +18,7 @@ const sign_rules = Complex{Int8}[1 1 1 1;
 function pauliprod(string1::Vector{Int8},
     string2::Vector{Int8})::Tuple{Vector{Int8},Complex{Int8},Bool}
 
-    length(string1) == length(string2) || DimensionMismatch("Strings have different lengths ($(length(string1)) and $(length(string2)))")
+    length(string1) == length(string2) || throw(DimensionMismatch("Strings have different lengths ($(length(string1)) and $(length(string2)))"))
     index = CartesianIndex.(string1, string2)
     result = rules[index]
     sign = prod(sign_rules[index])
@@ -135,7 +135,7 @@ function conjugate(sentence::Dict{Vector{Int8},Float64},
     angles::Vector{Float64};
     tol=0.0)
 
-    size(generators, 1) == length(angles) || DimensionMismatch("Generators and angles need to have equal size ($(size(generators, 2)) and $(length(angles)))")
+    size(generators, 2) == length(angles) || throw(DimensionMismatch("Generators and angles need to have equal size ($(size(generators, 2)) and $(length(angles)))"))
 
     result = copy(sentence)
     for i in eachindex(angles)[end:-1:1]
