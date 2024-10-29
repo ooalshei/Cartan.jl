@@ -22,7 +22,7 @@ const flag_signs = Complex{Int8}[1 1 1 1 0 0;
 function _flag_pauliprod(string1::Vector{Int8},
     string2::Vector{Int8})::Tuple{Vector{Int8},Complex{Int8},Bool}
 
-    length(string1) == length(string2) || DimensionMismatch("Strings have different lengths ($(length(string1)) and $(length(string2)))")
+    length(string1) == length(string2) || throw(DimensionMismatch("Strings have different lengths ($(length(string1)) and $(length(string2)))"))
     index = CartesianIndex.(string1, string2)
     result = flag_rules[index]
     sign = prod(flag_signs[index])

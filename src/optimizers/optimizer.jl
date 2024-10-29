@@ -126,7 +126,7 @@ function optimizer(ham::Dict{Vector{Int8},Float64},
     tol::Float64=0.0,
     toltype::String="relerror")::Dict{String,Union{Dict{Vector{Int8},Float64},Vector{Float64}}}
 
-    length(initangles) == size(generators, 2) || ArgumentError("Incorrect number of initial angles. Expected $(size(generators, 2)), got $(length(initangles)).")
+    length(initangles) == size(generators, 2) || throw(ArgumentError("Incorrect number of initial angles. Expected $(size(generators, 2)), got $(length(initangles))."))
 
     irr = _mutirr(size(subalgebra, 2))
     subalgelem = Dict{Vector{Int8},Float64}((subalgebra[:, i], irr[i]) for i in axes(subalgebra, 2))

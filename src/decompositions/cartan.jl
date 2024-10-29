@@ -121,18 +121,18 @@ function hamiltonian(model::String, n::Int, couplings::Vector{Float64}=[1.0]; pb
     This function generates the Hamiltonian for a given model.
     """
     if uppercase(model) == "ISING"
-        length(couplings) == 1 || ArgumentError("Incorrect number of couplings. Expected 1 (J), got $(length(couplings)). H = -JXX")
+        length(couplings) == 1 || throw(ArgumentError("Incorrect number of couplings. Expected 1 (J), got $(length(couplings)). H = -JXX"))
         strings = generatexx(n, pbc=pbc)
         coefficients = -couplings[1] * ones(Float64, size(strings, 2))
 
     elseif uppercase(model) == "XY"
-        length(couplings) == 1 || ArgumentError("Incorrect number of couplings. Expected 1 (J), got $(length(couplings)). H = -J(XX + YY)")
+        length(couplings) == 1 || throw(ArgumentError("Incorrect number of couplings. Expected 1 (J), got $(length(couplings)). H = -J(XX + YY)"))
         strings = [generatexx(n, pbc=pbc) generateyy(n, pbc=pbc)]
         coefficients = -couplings[1] * ones(Float64, size(strings, 2))
 
     elseif uppercase(model) == "TFIM"
         if length(couplings) != 2
-            ArgumentError("Incorrect number of couplings. Expected 2 (J,g), got $(length(couplings)). H = -J(XX + gZ)")
+            throw(ArgumentError("Incorrect number of couplings. Expected 2 (J,g), got $(length(couplings)). H = -J(XX + gZ)"))
         elseif couplings[2] == 0
             strings, coefficients = hamiltonian("Ising", n, [couplings[1]], pbc=pbc)
         else
@@ -143,7 +143,7 @@ function hamiltonian(model::String, n::Int, couplings::Vector{Float64}=[1.0]; pb
 
     elseif uppercase(model) == "TFXY"
         if length(couplings) != 2
-            ArgumentError("Incorrect number of couplings. Expected 2 (J,g), got $(length(couplings)). H = -J(XX + YY + gZ)")
+            throw(ArgumentError("Incorrect number of couplings. Expected 2 (J,g), got $(length(couplings)). H = -J(XX + YY + gZ)"))
         elseif couplings[2] == 0
             strings, coefficients = hamiltonian("XY", n, [couplings[1]], pbc=pbc)
         else
@@ -153,17 +153,17 @@ function hamiltonian(model::String, n::Int, couplings::Vector{Float64}=[1.0]; pb
         end
 
     elseif uppercase(model) == "HEISENBERG"
-        length(couplings) == 1 || ArgumentError("Incorrect number of couplings. Expected 1 (J), got $(length(couplings)). H = -J(XX + YY + ZZ)")
+        length(couplings) == 1 || throw(ArgumentError("Incorrect number of couplings. Expected 1 (J), got $(length(couplings)). H = -J(XX + YY + ZZ)"))
         strings = [generatexx(n, pbc=pbc) generateyy(n, pbc=pbc) generatezz(n, pbc=pbc)]
         coefficients = -couplings[1] * ones(Float64, size(strings, 2))
 
     elseif uppercase(model) == "GN"
-        length(couplings) == 1 || ArgumentError("Incorrect number of couplings. Expected 2 (G,mu), got $(length(couplings)). H = (1+mu)(YX - XY) + GZ - GZZ ")
+        length(couplings) == 1 || throw(ArgumentError("Incorrect number of couplings. Expected 2 (G,mu), got $(length(couplings)). H = (1+mu)(YX - XY) + GZ - GZZ "))
         strings = [generateyx(n) generatexy(n) generatez(n) [generatez(div(n, 2)); generatez(div(n, 2))]]
         coefficients = [(0.5 + couplings[1]) * ones(Float64, n - 1); -(0.5 + couplings[1]) * ones(Float64, n - 1); couplings[2] * ones(Float64, n); -couplings[2] * ones(Float64, div(n, 2))]
 
     else
-        ArgumentError("Model not recognized.")
+        throw(ArgumentError("Model not recognized."))
     end
     return strings, coefficients
 end
