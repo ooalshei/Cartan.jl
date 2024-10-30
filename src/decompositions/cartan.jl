@@ -123,12 +123,12 @@ function hamiltonian(model::String, n::Int, couplings::Vector{Float64}=[1.0]; pb
     if uppercase(model) == "ISING"
         length(couplings) == 1 || throw(ArgumentError("Incorrect number of couplings. Expected 1 (J), got $(length(couplings)). H = -JXX"))
         strings = generatexx(n, pbc=pbc)
-        coefficients = -couplings[1] * ones(Float64, size(strings, 2))
+        coefficients = fill(-couplings[1], size(strings, 2))
 
     elseif uppercase(model) == "XY"
         length(couplings) == 1 || throw(ArgumentError("Incorrect number of couplings. Expected 1 (J), got $(length(couplings)). H = -J(XX + YY)"))
         strings = [generatexx(n, pbc=pbc) generateyy(n, pbc=pbc)]
-        coefficients = -couplings[1] * ones(Float64, size(strings, 2))
+        coefficients = fill(-couplings[1], size(strings, 2))
 
     elseif uppercase(model) == "TFIM"
         if length(couplings) != 2
@@ -137,7 +137,7 @@ function hamiltonian(model::String, n::Int, couplings::Vector{Float64}=[1.0]; pb
             strings, coefficients = hamiltonian("Ising", n, [couplings[1]], pbc=pbc)
         else
             strings = [generatexx(n, pbc=pbc) generatez(n)]
-            coefficients = -couplings[1] * ones(Float64, size(strings, 2))
+            coefficients = fill(-couplings[1], size(strings, 2))
             coefficients[end-n+1:end] *= couplings[2]
         end
 
@@ -148,19 +148,19 @@ function hamiltonian(model::String, n::Int, couplings::Vector{Float64}=[1.0]; pb
             strings, coefficients = hamiltonian("XY", n, [couplings[1]], pbc=pbc)
         else
             strings = [generatexx(n, pbc=pbc) generateyy(n, pbc=pbc) generatez(n)]
-            coefficients = -couplings[1] * ones(Float64, size(strings, 2))
+            coefficients = fill(-couplings[1], size(strings, 2))
             coefficients[end-n+1:end] *= couplings[2]
         end
 
     elseif uppercase(model) == "HEISENBERG"
         length(couplings) == 1 || throw(ArgumentError("Incorrect number of couplings. Expected 1 (J), got $(length(couplings)). H = -J(XX + YY + ZZ)"))
         strings = [generatexx(n, pbc=pbc) generateyy(n, pbc=pbc) generatezz(n, pbc=pbc)]
-        coefficients = -couplings[1] * ones(Float64, size(strings, 2))
+        coefficients = fill(-couplings[1], size(strings, 2))
 
     elseif uppercase(model) == "GN"
         length(couplings) == 1 || throw(ArgumentError("Incorrect number of couplings. Expected 2 (G,mu), got $(length(couplings)). H = (1+mu)(YX - XY) + GZ - GZZ "))
         strings = [generateyx(n) generatexy(n) generatez(n) [generatez(div(n, 2)); generatez(div(n, 2))]]
-        coefficients = [(0.5 + couplings[1]) * ones(Float64, n - 1); -(0.5 + couplings[1]) * ones(Float64, n - 1); couplings[2] * ones(Float64, n); -couplings[2] * ones(Float64, div(n, 2))]
+        coefficients = [fill(0.5 + couplings[1], n - 1); fill(-(0.5 + couplings[1]), n - 1); fill(couplings[2], n); fill(-couplings[2], div(n, 2))]
 
     else
         throw(ArgumentError("Model not recognized."))
@@ -168,11 +168,11 @@ function hamiltonian(model::String, n::Int, couplings::Vector{Float64}=[1.0]; pb
     return strings, coefficients
 end
 
-function _dla(algebra::Matrix{Int8}, string1::Vector{Int8}, iter)::Matrix{Int8}
+function _dla(string1::SubArray, iter)::Matrix{Int8}
     # result = Matrix{Int8}(undef, length(string1), 0)
     result = Vector{Int8}(undef, 0)
-    for j in iter
-        string, _, c = pauliprod(string1, algebra[:, j])
+    for alg_string in iter
+        string, _, c = pauliprod(string1, alg_string)
         # if !c
         #     string in eachcol(algebra) || (result = [result string])
         # end
@@ -194,10 +194,10 @@ function dla(strings::Matrix{Int8})::Matrix{Int8}
 
     while true
         for i in axes(algebra, 2)[end:-1:initialind]
-            iter = axes(algebra, 2)[i-1:-1:1]
+            iter = eachcol(algebra)[i-1:-1:1]
             chunks = Iterators.partition(iter, max(1, length(iter) ÷ Threads.nthreads()))
             tasks = map(chunks) do chunk
-                Threads.@spawn _dla(algebra, algebra[:, i], chunk)
+                Threads.@spawn _dla(view(algebra, :, i), chunk)
             end
             results = setdiff(fetch.(tasks), [Matrix{Int8}(undef, n, 0)])
             # for result in results
@@ -219,12 +219,12 @@ function subalgfind(strings::Matrix{Int8})::Matrix{Int8}
     """
     sortedstrings = strings[:, sortperm(count(==(1), strings, dims=1)[1, :], rev=true)]
     subalgebra = sortedstrings[:, 1:1]
-    for i in axes(sortedstrings, 2)[2:end]
-        for j in axes(subalgebra, 2)
-            if !(pauliprod(sortedstrings[:, i], subalgebra[:, j])[3])
+    for string1 in eachcol(sortedstrings)[2:end]
+        for string2 in eachcol(subalgebra)
+            if !(pauliprod(string1, string2)[3])
                 break
-            elseif j == size(subalgebra, 2)
-                subalgebra = [subalgebra sortedstrings[:, i]]
+            elseif string2 == @view subalgebra[:, end]
+                subalgebra = [subalgebra string1]
                 break
             end
         end
