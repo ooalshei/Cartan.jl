@@ -25,6 +25,36 @@ function pauliprod(string1::Vector{Int8},
     imag(sign) == 0 ? (return result, sign, true) : (return result, sign, false)
 end
 
+function pauliprod(string1::SubArray,
+    string2::Vector{Int8})::Tuple{Vector{Int8},Complex{Int8},Bool}
+
+    length(string1) == length(string2) || throw(DimensionMismatch("Strings have different lengths ($(length(string1)) and $(length(string2)))"))
+    index = CartesianIndex.(string1, string2)
+    result = rules[index]
+    sign = prod(sign_rules[index])
+    imag(sign) == 0 ? (return result, sign, true) : (return result, sign, false)
+end
+
+function pauliprod(string1::Vector{Int8},
+    string2::SubArray)::Tuple{Vector{Int8},Complex{Int8},Bool}
+
+    length(string1) == length(string2) || throw(DimensionMismatch("Strings have different lengths ($(length(string1)) and $(length(string2)))"))
+    index = CartesianIndex.(string1, string2)
+    result = rules[index]
+    sign = prod(sign_rules[index])
+    imag(sign) == 0 ? (return result, sign, true) : (return result, sign, false)
+end
+
+function pauliprod(string1::SubArray,
+    string2::SubArray)::Tuple{Vector{Int8},Complex{Int8},Bool}
+
+    length(string1) == length(string2) || throw(DimensionMismatch("Strings have different lengths ($(length(string1)) and $(length(string2)))"))
+    index = CartesianIndex.(string1, string2)
+    result = rules[index]
+    sign = prod(sign_rules[index])
+    imag(sign) == 0 ? (return result, sign, true) : (return result, sign, false)
+end
+
 function _paulisum(sentence1::Dict{Vector{Int8},Float64},
     sentence2::Dict{Vector{Int8},Float64})::Dict{Vector{Int8},Float64}
 
@@ -38,7 +68,7 @@ end
 function paulisum(sentences::Dict{Vector{Int8},Float64}...;
     tol=0.0)::Dict{Vector{Int8},Float64}
 
-    result = copy(sentences[1])
+    result = sentences[1]
     for sentence in sentences[2:end]
         result = _paulisum(result, sentence)
     end
@@ -123,9 +153,29 @@ function _conjugate(sentence::Dict{Vector{Int8},Float64},
         else
             result[key] = get(result, key, 0.0) + value * cos(2 * angle)
             result[string] = get(result, string, 0.0) - imag(sign) * value * sin(2 * angle)
+            abs(result[key]) <= tol && pop!(result, key)
             abs(result[string]) <= tol && pop!(result, string)
         end
-        abs(result[key]) <= tol && pop!(result, key)
+    end
+    return result
+end
+
+function _conjugate(sentence::Dict{Vector{Int8},Float64},
+    generator::SubArray,
+    angle::Float64;
+    tol::Float64=0.0)::Dict{Vector{Int8},Float64}
+
+    result = Dict{Vector{Int8},Float64}()
+    for (key, value) in sentence
+        string, sign, c = pauliprod(generator, key)
+        if c
+            result[key] = get(result, key, 0.0) + value
+        else
+            result[key] = get(result, key, 0.0) + value * cos(2 * angle)
+            result[string] = get(result, string, 0.0) - imag(sign) * value * sin(2 * angle)
+            abs(result[key]) <= tol && pop!(result, key)
+            abs(result[string]) <= tol && pop!(result, string)
+        end
     end
     return result
 end
@@ -141,10 +191,31 @@ function conjugate(sentence::Dict{Vector{Int8},Float64},
     for i in eachindex(angles)[end:-1:1]
         chunks = Iterators.partition(result, max(1, length(result) ÷ Threads.nthreads()))
         tasks = map(chunks) do chunk
-            Threads.@spawn _conjugate(Dict(chunk), generators[:, i], angles[i], tol=tol)
+            Threads.@spawn _conjugate(Dict(chunk), view(generators, :, i), angles[i], tol=tol)
         end
         result = paulisum(fetch.(tasks)..., tol=tol)
         # _conjugate!(result, generators[:, i], angles[i], tol=tol)
     end
     return result
 end
+
+function conjugate(sentence::Dict{Vector{Int8},Float64},
+    generators::SubArray,
+    angles::Vector{Float64};
+    tol=0.0)
+
+    size(generators, 2) == length(angles) || throw(DimensionMismatch("Generators and angles need to have equal size ($(size(generators, 2)) and $(length(angles)))"))
+
+    result = copy(sentence)
+    for i in eachindex(angles)[end:-1:1]
+        chunks = Iterators.partition(result, max(1, length(result) ÷ Threads.nthreads()))
+        tasks = map(chunks) do chunk
+            Threads.@spawn _conjugate(Dict(chunk), view(generators, :, i), angles[i], tol=tol)
+        end
+        result = paulisum(fetch.(tasks)..., tol=tol)
+        # _conjugate!(result, generators[:, i], angles[i], tol=tol)
+    end
+    return result
+end
+
+

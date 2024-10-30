@@ -60,8 +60,24 @@ function cost(generators::Matrix{Int8},
     return costval
 end
 
+function cost(generators::SubArray,
+    angles::Vector{Float64},
+    subalgelem::Dict{Vector{Int8},Float64},
+    ham::Dict{Vector{Int8},Float64};
+    tol::Float64=0.0)::Float64
+    raw"""
+    Calculates the cost function :math:`\mathrm{Tr}(KvK^\dag, \mathcal{H})`.
+    """
+    sentence = conjugate(subalgelem, generators, angles, tol=tol)
+    costval = 0.0
+    for (key, value) in ham
+        key in keys(sentence) && (costval += value * sentence[key])
+    end
+    return costval
+end
+
 function _cost!(ret::Vector{Float64},
-    generators::Matrix{Int8},
+    generators::SubArray,
     angles::Vector{Float64},
     partialelem::Dict{Vector{Int8},Float64},
     ham::Dict{Vector{Int8},Float64};
@@ -87,8 +103,8 @@ function _rotostep!(partialelem::Dict{Vector{Int8},Float64},
     tol::Float64)::Nothing
 
     for i in eachindex(angles)
-        partialelem = _conjugate(partialelem, generators[:, i], -angles[i], tol=tol)
-        _cost!(points, generators[:, 1:i], angles[1:i], partialelem, ham, tol=tol)
+        partialelem = _conjugate(partialelem, view(generators, :, i), -angles[i], tol=tol)
+        _cost!(points, view(generators, :, 1:i), angles[1:i], partialelem, ham, tol=tol)
         angles[i] = _minanglefind(points)
         # cosines[i] = cos(2 * angles[i])
         # sines[i] = -sin(2 * angles[i])
@@ -104,10 +120,10 @@ function errorfind!(ham::Dict{Vector{Int8},Float64}, subalgebra::Matrix{Int8})::
     """
     errornorm = 0.0
     fullnorm = 0.0
-    for key in keys(ham)
-        fullnorm += abs2(ham[key])
-        for i in axes(subalgebra, 2)
-            if !pauliprod(key, subalgebra[:, i])[3]
+    for (key, value) in ham
+        fullnorm += abs2(value)
+        for string in eachcol(subalgebra)
+            if !pauliprod(key, string)[3]
                 errornorm += abs2(pop!(ham, key))
                 break
             end
