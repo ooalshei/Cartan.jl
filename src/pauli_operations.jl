@@ -75,7 +75,7 @@ function paulisum(sentences::Dict{Vector{Int8},Float64}...;
     for (key, value) in result
         abs(value) <= tol && pop!(result, key)
     end
-    return result
+    length(sentences) > 1 ? (return result) : return copy(sentences[1])
 end
 
 function _paulidiff(sentence1::Dict{Vector{Int8},Float64},
@@ -98,7 +98,7 @@ function paulidiff(sentences::Dict{Vector{Int8},Float64}...;
     for (key, value) in result
         abs(value) <= tol && pop!(result, key)
     end
-    return result
+    length(sentences) > 1 ? (return result) : return copy(sentences[1])
 end
 
 function _pauliprod(sentence1::Dict{Vector{Int8},Number},
@@ -124,7 +124,7 @@ function pauliprod(sentences::Dict{Vector{Int8},Number}...;
     for (key, value) in result
         abs(value) <= tol && pop!(result, key)
     end
-    return result
+    length(sentences) > 1 ? (return result) : return copy(sentences[1])
 end
 
 function _conjugate(sentence::Dict{Vector{Int8},Float64},
@@ -196,7 +196,7 @@ function conjugate(sentence::Dict{Vector{Int8},Float64},
     #     result = paulisum(fetch.(tasks)..., tol=tol)
         result = _conjugate(result, generators[:, i], angles[i], tol=tol)
     end
-    return result
+    length(angles) > 0 ? (return result) : return copy(sentence)
 end
 
 function conjugate(sentence::Dict{Vector{Int8},Float64},
@@ -215,7 +215,7 @@ function conjugate(sentence::Dict{Vector{Int8},Float64},
     #     result = paulisum(fetch.(tasks)..., tol=tol)
         result = _conjugate(result, generators[:, i], angles[i], tol=tol)
     end
-    return result
+    length(angles) > 0 ? (return result) : return copy(sentence)
 end
 
 
