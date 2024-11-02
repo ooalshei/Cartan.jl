@@ -187,14 +187,14 @@ function conjugate(sentence::Dict{Vector{Int8},Float64},
 
     size(generators, 2) == length(angles) || throw(DimensionMismatch("Generators and angles need to have equal size ($(size(generators, 2)) and $(length(angles)))"))
 
-    result = copy(sentence)
+    result = sentence
     for i in eachindex(angles)[end:-1:1]
-        chunks = Iterators.partition(result, max(1, length(result) ÷ Threads.nthreads()))
-        tasks = map(chunks) do chunk
-            Threads.@spawn _conjugate(Dict(chunk), view(generators, :, i), angles[i], tol=tol)
-        end
-        result = paulisum(fetch.(tasks)..., tol=tol)
-        # _conjugate!(result, generators[:, i], angles[i], tol=tol)
+    #     chunks = Iterators.partition(result, max(1, length(result) ÷ Threads.nthreads()))
+    #     tasks = map(chunks) do chunk
+    #         Threads.@spawn _conjugate(Dict(chunk), view(generators, :, i), angles[i], tol=tol)
+    #     end
+    #     result = paulisum(fetch.(tasks)..., tol=tol)
+        result = _conjugate(result, generators[:, i], angles[i], tol=tol)
     end
     return result
 end
@@ -206,14 +206,14 @@ function conjugate(sentence::Dict{Vector{Int8},Float64},
 
     size(generators, 2) == length(angles) || throw(DimensionMismatch("Generators and angles need to have equal size ($(size(generators, 2)) and $(length(angles)))"))
 
-    result = copy(sentence)
+    result = sentence
     for i in eachindex(angles)[end:-1:1]
-        chunks = Iterators.partition(result, max(1, length(result) ÷ Threads.nthreads()))
-        tasks = map(chunks) do chunk
-            Threads.@spawn _conjugate(Dict(chunk), view(generators, :, i), angles[i], tol=tol)
-        end
-        result = paulisum(fetch.(tasks)..., tol=tol)
-        # _conjugate!(result, generators[:, i], angles[i], tol=tol)
+    #     chunks = Iterators.partition(result, max(1, length(result) ÷ Threads.nthreads()))
+    #     tasks = map(chunks) do chunk
+    #         Threads.@spawn _conjugate(Dict(chunk), view(generators, :, i), angles[i], tol=tol)
+    #     end
+    #     result = paulisum(fetch.(tasks)..., tol=tol)
+        result = _conjugate(result, generators[:, i], angles[i], tol=tol)
     end
     return result
 end
