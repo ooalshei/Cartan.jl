@@ -158,7 +158,7 @@ function hamiltonian(model::String, n::Int, couplings::Vector{Float64}=[1.0]; pb
         coefficients = fill(-couplings[1], size(strings, 2))
 
     elseif uppercase(model) == "GN"
-        length(couplings) == 1 || throw(ArgumentError("Incorrect number of couplings. Expected 2 (G,mu), got $(length(couplings)). H = (1+mu)(YX - XY) + GZ - GZZ "))
+        length(couplings) == 2 || throw(ArgumentError("Incorrect number of couplings. Expected 2 (G,mu), got $(length(couplings)). H = (1+mu)(YX - XY) + GZ - GZZ "))
         strings = [generateyx(n) generatexy(n) generatez(n) [generatez(div(n, 2)); generatez(div(n, 2))]]
         coefficients = [fill(0.5 + couplings[1], n - 1); fill(-(0.5 + couplings[1]), n - 1); fill(couplings[2], n); fill(-couplings[2], div(n, 2))]
 
