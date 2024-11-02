@@ -1,7 +1,7 @@
 name = "Cartan"
 uuid = "ab205724-bc94-4f9d-9de2-3802b5d24b63"
 authors = ["Omar Alsheikh"]
-version = "0.2.0DEV"
+version = "0.2.0-DEV"
 
 [compat]
 SafeTestsets = "0.1.0"
