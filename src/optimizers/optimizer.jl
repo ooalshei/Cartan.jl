@@ -40,7 +40,7 @@ function _minanglefind(points::Vector{Float64})::Float64
     # fit = curve_fit(cosine, [0, pi /4, pi / 2], points, [1.0, 0.0, 0.0])
     # d = coef(fit)[2]
     # coef(fit)[1] < 0 ? (return -d / 2) : (return (pi - d) / 2)
-    return 0.5 * atan(points[2] - (points[1] + points[3]) / 2, (points[1] - points[3]) / 2) + pi / 2
+    return 0.5 * atan(2 * points[2] - (points[1] + points[3]), (points[1] - points[3])) + pi / 2
 
 end
 
@@ -150,7 +150,7 @@ function optimizer(ham::Dict{Vector{Int8},Float64},
         angles = copy(initangles)
         # cosines = cos.(2 .* angles)
         # sines = .-sin.(2 .* angles)
-        points = zeros(Float64, 3)
+        points = Vector{Float64}(undef, 3)
         errorcache = 1.0
 
         iter = 0
@@ -160,7 +160,6 @@ function optimizer(ham::Dict{Vector{Int8},Float64},
             partialelem = conjugate(subalgelem, generators, angles, tol=tol)
             _rotostep!(partialelem, points, angles, generators, ham, tol=tol)
             if (iter % 10 == 0) | (iter == maxiter)
-                # println(cost(generators, angles, subalgelem, ham, tol=tol))
                 if toltype == "relerror"
                     transformedham = conjugate(ham, reverse(generators, dims=2), -reverse(angles), tol=tol)
                     relerror = errorfind!(transformedham, subalgebra)
@@ -168,13 +167,13 @@ function optimizer(ham::Dict{Vector{Int8},Float64},
                         iter == maxiter ? println("Max iterations reached.") : println("Converged in $iter iterations.")
                         println("Final relative error: $(sqrt(relerror))")
                         return Dict("H" => transformedham, "angles" => angles)
-                    elseif abs(sqrt(errorcache) - sqrt(relerror)) < mintol / 10
+                    elseif (sqrt(errorcache) - sqrt(relerror)) < mintol / 1000
                         println("Relative error after $iter iterations: $(sqrt(relerror))")
-                        println("Convergence too slow. Starting over with another initial guess.")
+                        println("Convergence too slow. Adding noise.")
                         println()
-                        iter = 0
+                        # iter = 0
                         errorcache = 1.0
-                        angles = pi * rand(size(generators, 2))
+                        angles += 0.1 * randn(size(angles))
 
                     else
                         errorcache = relerror
