@@ -77,39 +77,40 @@ function cost(generators::SubArray,
 end
 
 function _cost!(ret::Vector{Float64},
-    generators::SubArray,
-    angles::Vector{Float64},
+    generator::SubArray,
     partialelem::Dict{Vector{Int8},Float64},
-    ham::Dict{Vector{Int8},Float64};
+    partialham::Dict{Vector{Int8},Float64};
     tol::Float64=0.0)::Nothing
     raw"""
     Calculates the cost function :math:`\mathrm{Tr}(KvK^\dag, \mathcal{H})` at 0, pi/4, pi/2.
     """
 
-    angles[end] = 0
-    ret[1] = cost(generators, angles, partialelem, ham, tol=tol)
-    angles[end] = pi / 4
-    ret[2] = cost(generators, angles, partialelem, ham, tol=tol)
-    angles[end] = pi / 2
-    ret[3] = cost(generators, angles, partialelem, ham, tol=tol)
+    @sync begin
+        Threads.@spawn ret[1] = cost(zeros(Int8, 0, 0), zeros(Float64, 0), partialelem, partialham, tol=tol)
+        Threads.@spawn ret[2] = cost(generator, [pi / 4], partialelem, partialham, tol=tol)
+        Threads.@spawn ret[3] = cost(generator, [pi / 2], partialelem, partialham, tol=tol)
+    end
     nothing
 end
 
-function _rotostep!(partialelem::Dict{Vector{Int8},Float64},
+function _rotostep!(angles::Vector{Float64},
     points::Vector{Float64},
-    angles::Vector{Float64},
-    generators::Matrix{Int8},
-    ham::Dict{Vector{Int8},Float64};
-    tol::Float64)::Nothing
+    partialelem::Dict{Vector{Int8},Float64},
+    ham::Dict{Vector{Int8},Float64},
+    generators::Matrix{Int8};
+    tol::Float64)::Dict{Vector{Int8},Float64}
 
+    task = Threads.@spawn ham
     for i in eachindex(angles)
-        partialelem = _conjugate(partialelem, view(generators, :, i), -angles[i], tol=tol)
-        _cost!(points, view(generators, :, 1:i), angles[1:i], partialelem, ham, tol=tol)
+        partialelem = conjugate(partialelem, view(generators, :, i:i), -angles[i:i], tol=tol)
+        partialham = fetch(task)
+        _cost!(points, view(generators, :, i:i), partialelem, partialham, tol=tol)
         angles[i] = _minanglefind(points)
+        task = Threads.@spawn conjugate(partialham, view(generators, :, i:i), -angles[i:i], tol=tol)
         # cosines[i] = cos(2 * angles[i])
         # sines[i] = -sin(2 * angles[i])
     end
-    nothing
+    return fetch(task)
 end
 
 function errorfind!(ham::Dict{Vector{Int8},Float64}, subalgebra::Matrix{Int8})::Float64
@@ -158,10 +159,10 @@ function optimizer(ham::Dict{Vector{Int8},Float64},
             iter += 1
             println("Begin iteration $iter...")
             partialelem = conjugate(subalgelem, generators, angles, tol=tol)
-            _rotostep!(partialelem, points, angles, generators, ham, tol=tol)
+            transformedham = _rotostep!(angles, points, partialelem, ham, generators, tol=tol)
             if (iter % 10 == 0) | (iter == maxiter)
                 if toltype == "relerror"
-                    transformedham = conjugate(ham, reverse(generators, dims=2), -reverse(angles), tol=tol)
+                    # transformedham = conjugate(ham, reverse(generators, dims=2), -reverse(angles), tol=tol)
                     relerror = errorfind!(transformedham, subalgebra)
                     if (relerror <= mintol^2) | (iter == maxiter)
                         iter == maxiter ? println("Max iterations reached.") : println("Converged in $iter iterations.")
