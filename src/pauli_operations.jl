@@ -15,7 +15,7 @@ const sign_rules = Complex{Int8}[1 1 1 1;
     1 -1im 1 1im;
     1 1im -1im 1]
 
-function pauliprod(string1::Vector{Int8},
+@inline function pauliprod(string1::Vector{Int8},
     string2::Vector{Int8})::Tuple{Vector{Int8},Complex{Int8},Bool}
 
     length(string1) == length(string2) || throw(DimensionMismatch("Strings have different lengths ($(length(string1)) and $(length(string2)))"))
@@ -25,7 +25,7 @@ function pauliprod(string1::Vector{Int8},
     imag(sign) == 0 ? (return result, sign, true) : (return result, sign, false)
 end
 
-function pauliprod(string1::SubArray,
+@inline function pauliprod(string1::SubArray,
     string2::Vector{Int8})::Tuple{Vector{Int8},Complex{Int8},Bool}
 
     length(string1) == length(string2) || throw(DimensionMismatch("Strings have different lengths ($(length(string1)) and $(length(string2)))"))
@@ -35,7 +35,7 @@ function pauliprod(string1::SubArray,
     imag(sign) == 0 ? (return result, sign, true) : (return result, sign, false)
 end
 
-function pauliprod(string1::Vector{Int8},
+@inline function pauliprod(string1::Vector{Int8},
     string2::SubArray)::Tuple{Vector{Int8},Complex{Int8},Bool}
 
     length(string1) == length(string2) || throw(DimensionMismatch("Strings have different lengths ($(length(string1)) and $(length(string2)))"))
@@ -45,7 +45,7 @@ function pauliprod(string1::Vector{Int8},
     imag(sign) == 0 ? (return result, sign, true) : (return result, sign, false)
 end
 
-function pauliprod(string1::SubArray,
+@inline function pauliprod(string1::SubArray,
     string2::SubArray)::Tuple{Vector{Int8},Complex{Int8},Bool}
 
     length(string1) == length(string2) || throw(DimensionMismatch("Strings have different lengths ($(length(string1)) and $(length(string2)))"))
