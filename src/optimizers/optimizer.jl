@@ -138,10 +138,12 @@ function optimizer(ham::Dict{Vector{Int8},Float64},
     generators::Matrix{Int8},
     initangles::Vector{Float64}=pi * rand(size(generators, 2));
     method::String="roto",
-    maxiter::Int=0,
+    maxiter::Integer=0,
     mintol::Float64=1e-6,
     tol::Float64=0.0,
-    toltype::String="relerror")::Dict{String,Union{Dict{Vector{Int8},Float64},Vector{Float64}}}
+    toltype::String="relerror",
+    itertrack::Bool=false,
+    timetrack::Bool=false)::Dict{String,Union{Dict{Vector{Int8},Float64},Vector{Float64},Integer,Float64}}
 
     length(initangles) == size(generators, 2) || throw(ArgumentError("Incorrect number of initial angles. Expected $(size(generators, 2)), got $(length(initangles))."))
 
@@ -155,6 +157,7 @@ function optimizer(ham::Dict{Vector{Int8},Float64},
         errorcache = 1.0
 
         iter = 0
+        t = time()
         while true
             iter += 1
             println("Begin iteration $iter...")
@@ -167,14 +170,21 @@ function optimizer(ham::Dict{Vector{Int8},Float64},
                     if (relerror <= mintol^2) | (iter == maxiter)
                         iter == maxiter ? println("Max iterations reached.") : println("Converged in $iter iterations.")
                         println("Final relative error: $(sqrt(relerror))")
-                        return Dict("H" => transformedham, "angles" => angles)
-                    elseif (sqrt(errorcache) - sqrt(relerror)) < mintol / 1000
+
+                        if itertrack
+                            timetrack ? (return Dict("H" => transformedham, "angles" => angles, "iterations" => iter, "time" => time() - t)) : (return Dict("H" => transformedham, "angles" => angles, "iterations" => iter))
+                        else
+                            timetrack ? (return Dict("H" => transformedham, "angles" => angles, "time" => time() - t)) : (return Dict("H" => transformedham, "angles" => angles))
+                        end
+                    elseif (sqrt(errorcache) - sqrt(relerror)) <= 0
                         println("Relative error after $iter iterations: $(sqrt(relerror))")
-                        println("Convergence too slow. Adding noise.")
+                        println("Convergence too slow. Starting over.")
                         println()
-                        # iter = 0
+                        iter = 0
+                        angles = pi * rand(size(generators, 2))
+                        t = time()
                         errorcache = 1.0
-                        angles += 0.1 * randn(size(angles))
+                        # angles +=  mintol * randn(size(angles))
 
                     else
                         errorcache = relerror
