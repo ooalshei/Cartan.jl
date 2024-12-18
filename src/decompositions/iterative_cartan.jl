@@ -1,4 +1,4 @@
-function subalgred(strings::Matrix{Int8})::Matrix{Int8}
+function subalgred(strings::AbstractMatrix{Int8})::Matrix{Int8}
     abstrings = strings[:, 1]
     multstrings = strings[:, 1:1]
     i = 1
@@ -19,7 +19,7 @@ function subalgred(strings::Matrix{Int8})::Matrix{Int8}
     return reshape(abstrings, size(multstrings, 1), :)
 end
 
-function symsubspaces(kstrings::Matrix{Int8}, abstrings::Matrix{Int8})::Vector{Matrix{Int8}}
+function symsubspaces(kstrings::AbstractMatrix{Int8}, abstrings::AbstractMatrix{Int8})::Vector{Matrix{Int8}}
     strings = kstrings
     symstrings = Vector{Matrix{Int8}}(undef, size(abstrings, 2))
     for i in axes(abstrings, 2)
@@ -38,7 +38,7 @@ function symsubspaces(kstrings::Matrix{Int8}, abstrings::Matrix{Int8})::Vector{M
     return symstrings
 end
 
-function cleangenerators!(symgenerators::Vector{Matrix{Int8}}, abstrings::Matrix{Int8})::Matrix{Int8}
+function cleangenerators!(symgenerators::AbstractVector{Matrix{Int8}}, abstrings::AbstractMatrix{Int8})::Matrix{Int8}
     
     temp = Matrix{Int8}(undef, size(abstrings, 1), 0)
     while temp in symgenerators

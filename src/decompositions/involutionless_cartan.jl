@@ -1,3 +1,4 @@
+
 raw"""
 involutionless_cartan
 ------
@@ -5,31 +6,31 @@ This module finds a Cartan decomposition such that :math:`\mathcal{H} \subset \m
 involution. This decomposition is unique, and if no such decomposition is found, the Hamiltonian is said to be
 non-Cartan. The identity along with the three Pauli matrices are referred to as (1, 2, 3, 4).
 """
-const flag_rules = Int8[1 2 3 4 0 0;
+const FLAG_RULES = Int8[1 2 3 4 0 0;
     2 1 4 3 0 0;
     3 4 1 2 0 0;
     4 3 2 1 0 0;
     0 0 0 0 6 5;
     0 0 0 0 5 6]
 
-const flag_signs = Complex{Int8}[1 1 1 1 0 0;
+const FLAG_SIGNS = Complex{Int8}[1 1 1 1 0 0;
     1 1 1im -1im 0 0;
     1 -1im 1 1im 0 0;
     1 1im -1im 1 0 0;
     0 0 0 0 1 1;
     0 0 0 0 1 1]
 
-function _flag_pauliprod(string1::SubArray,
-    string2::SubArray)::Tuple{Vector{Int8},Complex{Int8},Bool}
+function _flag_pauliprod(string1::AbstractVector{Int8},
+    string2::AbstractVector{Int8})::Tuple{Vector{Int8},Complex{Int8},Bool}
 
     length(string1) == length(string2) || throw(DimensionMismatch("Strings have different lengths ($(length(string1)) and $(length(string2)))"))
     index = CartesianIndex.(string1, string2)
-    result = flag_rules[index]
-    sign = prod(flag_signs[index])
+    result = FLAG_RULES[index]
+    sign = prod(FLAG_SIGNS[index])
     imag(sign) == 0 ? (return result, sign, true) : (return result, sign, false)
 end
 
-function _flag_dla(string1::SubArray, iter)::Matrix{Int8}
+function _flag_dla(string1::AbstractVector{Int8}, iter)::Matrix{Int8}
     # result = Matrix{Int8}(undef, length(string1), 0)
     result = Vector{Int8}(undef, 0)
     for alg_string in iter
@@ -40,7 +41,7 @@ function _flag_dla(string1::SubArray, iter)::Matrix{Int8}
     return unique(reshape(result, length(string1), :), dims=2)
 end
 
-function involutionlessdecomp(strings::Matrix{Int8})::Dict
+function involutionlessdecomp(strings::AbstractMatrix{Int8})
     """
     dla
     ---

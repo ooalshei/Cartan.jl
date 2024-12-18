@@ -1,14 +1,14 @@
-function iterativeoptimizer(ham::Dict{Vector{Int8},Float64},
-    abstrings::Matrix{Int8},
-    symgenerators::Vector{Matrix{Int8}},
-    initangles::Vector{Vector{Float64}}=[pi * rand(size(symgen, 2)) for symgen in symgenerators];
-    method::String="roto",
+function iterativeoptimizer(ham::AbstractDict{<:AbstractVector{Int8},<:Real},
+    abstrings::AbstractMatrix{Int8},
+    symgenerators::AbstractVector{<:AbstractMatrix{Int8}},
+    initangles::AbstractVector{<:AbstractVector{<:Real}}=[pi * rand(size(symgen, 2)) for symgen in symgenerators];
+    method::AbstractString="roto",
     maxiter::Integer=0,
-    mintol::Float64=1e-6,
-    tol::Float64=0.0,
-    toltype::String="relerror",
+    convergence_tol::Real=1e-6,
+    coeff_tol::Real=0,
+    toltype::AbstractString="relerror",
     itertrack::Bool=false,
-    timetrack::Bool=false)::Dict{String,Union{Dict{Vector{Int8},Float64},Vector{Vector{Float64}},Integer,Float64}}
+    timetrack::Bool=false)
 
     angles = copy(initangles)
     relerror = 1.0
@@ -16,16 +16,16 @@ function iterativeoptimizer(ham::Dict{Vector{Int8},Float64},
     stepham = ham
     t = 0
     for i in axes(abstrings, 2)
-        ittol = max(1e-4, mintol * 10.0^(1 - i))
+        ittol = max(1e-4, convergence_tol * 10.0^(1 - i))
         println("Begin optimization for abelian element $i")
-        opt = optimizer(stepham, abstrings[:, i:i], symgenerators[i], angles[i], method=method, maxiter=maxiter, mintol=ittol, tol=tol, toltype=toltype, itertrack=itertrack, timetrack=timetrack)
+        opt = optimizer(stepham, abstrings[:, i:i], symgenerators[i], angles[i], method=method, maxiter=maxiter, convergence_tol=ittol, coeff_tol=coeff_tol, toltype=toltype, itertrack=itertrack, timetrack=timetrack)
         println()
         stepham = opt["H"]
         angles[i] = opt["angles"]
         itertrack && (iter += opt["iterations"])
         timetrack && (t += opt["time"])
     end
-    finalham = conjugate(ham, reverse(hcat(symgenerators...), dims=2), -reverse(vcat(angles...)), tol=tol)
+    finalham = conjugate(ham, reverse(hcat(symgenerators...), dims=2), -reverse(vcat(angles...)), atol=coeff_tol)
     relerror = errorfind!(finalham, abstrings)
     println("Combined relative error: $(sqrt(relerror))")
 

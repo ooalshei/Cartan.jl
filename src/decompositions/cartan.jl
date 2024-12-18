@@ -4,7 +4,7 @@ cartan
 This module contains methods that build Pauli strings given a Hamiltonian, generate the dynamical Lie algebra, and find
 Cartan decompositions. The identity along with the three Pauli matrices are referred to as (1, 2, 3, 4).
 """
-function generatexx(n::Int; pbc::Bool=false)::Matrix{Int8}
+function generatexx(n::Integer; pbc::Bool=false)::Matrix{Int8}
     """
     generatexx
     ----------
@@ -12,16 +12,16 @@ function generatexx(n::Int; pbc::Bool=false)::Matrix{Int8}
     """
     strings = ones(Int8, n, n - 1)
     for i in 1:n-1
-        strings[[i, i + 1], i] .= 2
+        strings[[i, i + 1], i] .= Int8(2)
     end
     if pbc
         strings = [strings ones(Int8, n)]
-        strings[[n, 1], n] .= 2
+        strings[[n, 1], n] .= Int8(2)
     end
     return strings
 end
 
-function generateyy(n::Int; pbc::Bool=false)::Matrix{Int8}
+function generateyy(n::Integer; pbc::Bool=false)::Matrix{Int8}
     """
     generateyy
     ----------
@@ -29,16 +29,16 @@ function generateyy(n::Int; pbc::Bool=false)::Matrix{Int8}
     """
     strings = ones(Int8, n, n - 1)
     for i in 1:n-1
-        strings[[i, i + 1], i] .= 3
+        strings[[i, i + 1], i] .= Int8(3)
     end
     if pbc
         strings = [strings ones(Int8, n)]
-        strings[[n, 1], n] .= 3
+        strings[[n, 1], n] .= Int8(3)
     end
     return strings
 end
 
-function generatezz(n::Int; pbc::Bool=false)::Matrix{Int8}
+function generatezz(n::Integer; pbc::Bool=false)::Matrix{Int8}
     """
     generatezz
     ----------
@@ -46,16 +46,16 @@ function generatezz(n::Int; pbc::Bool=false)::Matrix{Int8}
     """
     strings = ones(Int8, n, n - 1)
     for i in 1:n-1
-        strings[[i, i + 1], i] .= 4
+        strings[[i, i + 1], i] .= Int8(4)
     end
     if pbc
         strings = [strings ones(Int8, n)]
-        strings[[n, 1], n] .= 4
+        strings[[n, 1], n] .= Int8(4)
     end
     return strings
 end
 
-function generatexy(n::Int)::Matrix{Int8}
+function generatexy(n::Integer)::Matrix{Int8}
     """
     generatexy
     ----------
@@ -63,12 +63,12 @@ function generatexy(n::Int)::Matrix{Int8}
     """
     strings = ones(Int8, n, n - 1)
     for i in 1:n-1
-        strings[[i, i + 1], i] = [2, 3]
+        strings[[i, i + 1], i] = Int8[2, 3]
     end
     return strings
 end
 
-function generateyx(n::Int)::Matrix{Int8}
+function generateyx(n::Integer)::Matrix{Int8}
     """
     generateyx
     ----------
@@ -76,45 +76,45 @@ function generateyx(n::Int)::Matrix{Int8}
     """
     strings = ones(Int8, n, n - 1)
     for i in 1:n-1
-        strings[[i, i + 1], i] = [3, 2]
+        strings[[i, i + 1], i] = Int8[3, 2]
     end
     return strings
 end
 
-function generatex(n::Int)::Matrix{Int8}
+function generatex(n::Integer)::Matrix{Int8}
     """
     generatex
     ---------
     This function generates the X strings for a chain of length n.
     """
     strings = ones(Int8, n, n)
-    strings[CartesianIndex.(1:n, 1:n)] .= 2
+    strings[CartesianIndex.(1:n, 1:n)] .= Int8(2)
     return strings
 end
 
-function generatey(n::Int)::Matrix{Int8}
+function generatey(n::Integer)::Matrix{Int8}
     """
     generatey
     ---------
     This function generates the Y strings for a chain of length n.
     """
     strings = ones(Int8, n, n)
-    strings[CartesianIndex.(1:n, 1:n)] .= 3
+    strings[CartesianIndex.(1:n, 1:n)] .= Int8(3)
     return strings
 end
 
-function generatez(n::Int)::Matrix{Int8}
+function generatez(n::Integer)::Matrix{Int8}
     """
     generatez
     ---------
     This function generates the Z strings for a chain of length n.
     """
     strings = ones(Int8, n, n)
-    strings[CartesianIndex.(1:n, 1:n)] .= 4
+    strings[CartesianIndex.(1:n, 1:n)] .= Int8(4)
     return strings
 end
 
-function hamiltonian(model::String, n::Int, couplings::Vector{Float64}=[1.0]; pbc::Bool=false)::Tuple{Matrix{Int8},Vector{Float64}}
+function hamiltonian(model::AbstractString, n::Integer, couplings::AbstractVector{<:Real}=[1.0]; pbc::Bool=false)::Tuple{Matrix{Int8},Vector{Float64}}
     """
     hamiltonian
     -----------
@@ -174,7 +174,7 @@ function hamiltonian(model::String, n::Int, couplings::Vector{Float64}=[1.0]; pb
     return strings, coefficients
 end
 
-function _dla(string1::SubArray, iter)::Matrix{Int8}
+function _dla(string1::AbstractVector{Int8}, iter)::Matrix{Int8}
     # result = Matrix{Int8}(undef, length(string1), 0)
     result = Vector{Int8}(undef, 0)
     for alg_string in iter
@@ -188,7 +188,7 @@ function _dla(string1::SubArray, iter)::Matrix{Int8}
     return unique(reshape(result, length(string1), :), dims=2)
 end
 
-function dla(strings::Matrix{Int8})::Matrix{Int8}
+function dla(strings::AbstractMatrix{Int8})::Matrix{Int8}
     """
     dla
     ---
@@ -217,7 +217,7 @@ function dla(strings::Matrix{Int8})::Matrix{Int8}
     end
 end
 
-function subalgfind(strings::Matrix{Int8})::Matrix{Int8}
+function subalgfind(strings::AbstractMatrix{Int8})::Matrix{Int8}
     """
     subalgfind
     ----------
@@ -238,7 +238,7 @@ function subalgfind(strings::Matrix{Int8})::Matrix{Int8}
     return subalgebra
 end
 
-function cartandecomp(strings::Matrix{Int8}, involution::Function)::Dict{String,Matrix{Int8}}
+function cartandecomp(strings::AbstractMatrix{Int8}, involution::Function)::Dict{String,Matrix{Int8}}
     """
     cartandecomp
     ------------
@@ -247,4 +247,3 @@ function cartandecomp(strings::Matrix{Int8}, involution::Function)::Dict{String,
     inds = involution(strings)
     return Dict("k" => strings[:, inds], "m" => strings[:, .!inds], "h" => subalgfind(strings[:, .!inds]))
 end
-
