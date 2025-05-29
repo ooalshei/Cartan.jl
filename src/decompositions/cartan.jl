@@ -114,7 +114,7 @@ function generatez(n::Integer)::Matrix{Int8}
     return strings
 end
 
-function hamiltonian(model::AbstractString, n::Integer, couplings::AbstractVector{<:Real}=[1.0]; pbc::Bool=false)::Tuple{Matrix{Int8},Vector{Float64}}
+function hamiltonian(model::AbstractString, n::Integer, couplings::AbstractVector{<:Real}=[1.0]; nf::Integer=0, pbc::Bool=false)::Tuple{Matrix{Int8},Vector{Float64}}
     """
     hamiltonian
     -----------
@@ -152,6 +152,18 @@ function hamiltonian(model::AbstractString, n::Integer, couplings::AbstractVecto
             coefficients[end-n+1:end] *= couplings[2]
         end
 
+    elseif uppercase(model) == "CFIM"
+        if length(couplings) != 3
+            throw(ArgumentError("Incorrect number of couplings. Expected 2 (J,g), got $(length(couplings)). H = -J(XX + g1Z + g2X)"))
+        # elseif couplings[2] == 0
+        #     strings, coefficients = hamiltonian("TFIM", n, couplings[1:2], pbc=pbc)
+        else
+            strings = [generatexx(n, pbc=pbc) generatez(n) generatex(n)]
+            coefficients = fill(-couplings[1], size(strings, 2))
+            coefficients[end-2*n+1:end-n] *= couplings[2]
+            coefficients[end-n+1:end] *= couplings[3]
+        end
+
     elseif uppercase(model) == "HEISENBERG"
         length(couplings) == 1 || throw(ArgumentError("Incorrect number of couplings. Expected 1 (J), got $(length(couplings)). H = -J(XX + YY + ZZ)"))
         strings = [generatexx(n, pbc=pbc) generateyy(n, pbc=pbc) generatezz(n, pbc=pbc)]
@@ -163,10 +175,30 @@ function hamiltonian(model::AbstractString, n::Integer, couplings::AbstractVecto
         coefficients = fill(-couplings[1], size(strings, 2))
         coefficients[2*size(strings, 2)÷3+1:end] *= couplings[2]
 
-    elseif uppercase(model) == "GN"
-        length(couplings) == 2 || throw(ArgumentError("Incorrect number of couplings. Expected 2 (G,mu), got $(length(couplings)). H = (1+mu)(YX - XY) + GZ - GZZ "))
-        strings = [generateyx(n) generatexy(n) generatez(n) [generatez(div(n, 2)); generatez(div(n, 2))]]
-        coefficients = [fill(0.5 + couplings[1], n - 1); fill(-(0.5 + couplings[1]), n - 1); fill(couplings[2], n); fill(-couplings[2], div(n, 2))]
+elseif uppercase(model) == "GN"
+        # length(couplings) == 2 || throw(ArgumentError("Incorrect number of couplings. Expected 2 (G,mu), got $(length(couplings)). H = (1+mu)(YX - XY) + GZ - GZZ "))
+        nf > 0 || throw(ArgumentError("Number of flavors must be greater than 0."))
+        strings = ones(Int8, n * nf, 0)
+        for i in 0:nf-1
+            temp = ones(Int8, n * nf, n - 1)
+            temp[1+i*n:(i+1)*n, :] = generateyx(n)
+            strings = [strings temp]
+        end
+        for i in 0:nf-1
+            temp = ones(Int8, n * nf, n - 1)
+            temp[1+i*n:(i+1)*n, :] = generatexy(n)
+            strings = [strings temp]
+        end
+        strings = [strings generatez(n * nf)]
+        for i in 0:nf-1
+            for j in i+1:nf-1
+                temp = ones(Int8, n * nf, n)
+                temp[1+i*n:(i+1)*n, :] = generatez(n)
+                temp[1+j*n:(j+1)*n, :] = generatez(n)
+                strings = [strings temp]
+            end
+        end
+        coefficients = [fill(1 - 2 * couplings[1], nf * (n - 1)); fill(-(1 - 2 * couplings[1]), nf * (n - 1)); fill(2 * couplings[3] - 4 * couplings[2] * (nf - 1), n * nf); fill(-4 * couplings[2], n * nf * (nf - 1) ÷ 2)]
 
     else
         throw(ArgumentError("Model not recognized."))
