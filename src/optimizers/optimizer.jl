@@ -144,7 +144,7 @@ function optimizer(ham::AbstractDict{<:AbstractVector{Int8},<:Real},
         t = time()
         while true
             iter += 1
-            println("Begin iteration $iter...")
+            # iter % 100 == 0 && println("Begin iteration $iter...")
             partialelem = conjugate(subalgelem, generators, angles, atol=coeff_tol)
             transformedham = _rotostep!(angles, points, partialelem, ham, generators, atol=coeff_tol)
             if (iter % 10 == 0) | (iter == maxiter)
@@ -156,7 +156,7 @@ function optimizer(ham::AbstractDict{<:AbstractVector{Int8},<:Real},
                         println("Final relative error: $(sqrt(relerror))")
 
                         if itertrack
-                            timetrack ? (return Dict("H" => transformedham, "angles" => angles, "iterations" => iter, "time" => time() - t)) : (return Dict("H" => transformedham, "angles" => angles, "iterations" => iter))
+                            timetrack ? (return Dict("H" => transformedham, "angles" => angles, "iterations" => iter, "calls" => 3 * iter * length(angles), "time" => time() - t)) : (return Dict("H" => transformedham, "angles" => angles, "iterations" => iter, "calls" => 3 * iter * length(angles)))
                         else
                             timetrack ? (return Dict("H" => transformedham, "angles" => angles, "time" => time() - t)) : (return Dict("H" => transformedham, "angles" => angles))
                         end
@@ -172,7 +172,7 @@ function optimizer(ham::AbstractDict{<:AbstractVector{Int8},<:Real},
 
                     else
                         errorcache = relerror
-                        println("Relative error after $iter iterations: $(sqrt(relerror))")
+                        iter % 50 == 0 && println("Relative error after $iter iterations: $(sqrt(relerror))")
                         println()
                     end
                 end

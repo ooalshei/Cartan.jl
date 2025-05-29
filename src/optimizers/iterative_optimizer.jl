@@ -13,6 +13,7 @@ function iterativeoptimizer(ham::AbstractDict{<:AbstractVector{Int8},<:Real},
     angles = copy(initangles)
     relerror = 1.0
     iter = 0
+    calls = 0
     stepham = ham
     t = 0
     for i in axes(abstrings, 2)
@@ -22,7 +23,10 @@ function iterativeoptimizer(ham::AbstractDict{<:AbstractVector{Int8},<:Real},
         println()
         stepham = opt["H"]
         angles[i] = opt["angles"]
-        itertrack && (iter += opt["iterations"])
+        if itertrack
+            iter += opt["iterations"]
+            calls += opt["calls"]
+        end
         timetrack && (t += opt["time"])
     end
     finalham = conjugate(ham, reverse(hcat(symgenerators...), dims=2), -reverse(vcat(angles...)), atol=coeff_tol)
@@ -31,7 +35,7 @@ function iterativeoptimizer(ham::AbstractDict{<:AbstractVector{Int8},<:Real},
 
     println("Optimization complete. Combined relative error: $(sqrt(relerror))")
     if itertrack
-        timetrack ? (return Dict("H" => finalham, "angles" => angles, "iterations" => iter, "time" => t)) : (return Dict("H" => finalham, "angles" => angles, "iterations" => iter))
+        timetrack ? (return Dict("H" => finalham, "angles" => angles, "iterations" => iter, "calls" => 3 * iter * length(angles), "time" => t)) : (return Dict("H" => finalham, "angles" => angles, "iterations" => iter, "calls" => 3 * iter * length(angles)))
     else
         timetrack ? (return Dict("H" => finalham, "angles" => angles, "time" => t)) :
         (return Dict("H" => finalham, "angles" => angles))
