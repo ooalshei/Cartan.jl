@@ -1,4 +1,4 @@
-function cost(generators::AbstractVector{<:Pauli},
+function cost(generators::AbstractVector{<:UPauli},
     angles::AbstractVector{Float64},
     subalgelem::PauliSentence,
     ham::PauliSentence;
@@ -7,11 +7,17 @@ function cost(generators::AbstractVector{<:Pauli},
     Calculates the cost function :math:`\mathrm{Tr}(KvK^\dag, \mathcal{H})`.
     """
     sentence = ad(subalgelem, generators, angles, atol=atol)
-    return sum(skipmissing(ham .* sentence), init=0.0)
+    result::Float64 = 0.0
+    for (key, value) in ham
+        if haskey(sentence, key)
+            result += (-1)^county(key, ham.qubits) * value * sentence[key]
+        end
+    end
+    return result
 end
 
 function _cost!(ret::AbstractVector{<:Real},
-    generator::Pauli,
+    generator::UPauli,
     partialelem::PauliSentence,
     partialham::PauliSentence;
     atol::Real=0)
@@ -31,23 +37,23 @@ function _rotostep!(angles::AbstractVector{<:Real},
     points::AbstractVector{<:Real},
     partialelem::PauliSentence,
     ham::PauliSentence,
-    generators::AbstractVector{<:Pauli};
+    generators::AbstractVector{<:UPauli};
     atol::Real)
 
     task = Threads.@spawn ham
     for i in eachindex(angles)
-        ad!(partialelem, generators[i], -angles[i], atol=atol)
+        partialelem = ad(partialelem, generators[i], -angles[i], atol=atol)
         partialham = fetch(task)
         _cost!(points, generators[i], partialelem, partialham, atol=atol)
         angles[i] = _minanglefind(points)
-        task = Threads.@spawn ad!(partialham, generators[i], -angles[i], atol=atol)
+        task = Threads.@spawn ad(partialham, generators[i], -angles[i], atol=atol)
         # cosines[i] = cos(2 * angles[i])
         # sines[i] = -sin(2 * angles[i])
     end
     return fetch(task)
 end
 
-function errorfind!(ham::PauliSentence, subalgebra::AbstractVector{<:Pauli{T,Q}})::Float64 where {T,Q}
+function errorfind!(ham::PauliSentence, subalgebra::AbstractVector{<:UPauli{T,Q}})::Float64 where {T,Q}
     """
     errorfind
     ----------
@@ -55,16 +61,16 @@ function errorfind!(ham::PauliSentence, subalgebra::AbstractVector{<:Pauli{T,Q}}
     """
     errornorm = 0.0
     fullnorm = 0.0
-    for (key, value) in pairs(skipmissing(ham))
+    for (key, value) in ham
         fullnorm += abs2(value)
-        unique!(com.(subalgebra, [Pauli{T,Q}(key)])) == [Pauli{T,Q}(0)] || (errornorm += abs2(value); ham[key] = missing)
+        unique!(com.(subalgebra, [UPauli{T,Q}(key)])) == [UPauli{T,Q}(0)] || (errornorm += abs2(value); delete!(ham, key))
     end
     return errornorm / fullnorm
 end
 
 function optimizer(ham::PauliSentence,
-    subalgebra::AbstractVector{<:Pauli},
-    generators::AbstractVector{<:Pauli},
+    subalgebra::AbstractVector{<:UPauli},
+    generators::AbstractVector{<:UPauli},
     initangles::AbstractVector{<:Real}=pi * rand(length(generators));
     method::AbstractString="roto",
     maxiter::Integer=0,
@@ -77,7 +83,7 @@ function optimizer(ham::PauliSentence,
     length(initangles) == length(generators) || throw(ArgumentError("Incorrect number of initial angles. Expected $(length(generators)), got $(length(initangles))."))
 
     irr = _mutirr(length(subalgebra))
-    subalgelem = PauliSentence{Union{Float64,Missing}}(subalgebra, irr)
+    subalgelem = PauliSentence{UInt, Float64}(subalgebra, irr)
     if method == "roto"
         angles = copy(initangles)
         # cosines = cos.(2 .* angles)
