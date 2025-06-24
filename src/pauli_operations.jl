@@ -89,7 +89,7 @@ end
 function _conjugate(sentence::AbstractDict{<:AbstractVector{Int8},Float64},
     generator::AbstractVector{Int8},
     angle::Real;
-    atol::Real=0)::Dict{Vector{Int8},Float64}
+    atol::Real=0)
 
     # trash = Matrix{Int8}(undef, length(generator), 0)
     # for (key, value) in sentence
@@ -104,25 +104,22 @@ function _conjugate(sentence::AbstractDict{<:AbstractVector{Int8},Float64},
     #         abs(sentence[key]) <= tol && pop!(sentence, key)
     #     end
     # end
-    result = Dict{Vector{Int8},Float64}()
+    result = Dict{Vector{Int8},Float64}(sentence)
+    iszero(angle) && return result
     for (key, value) in sentence
         string, sign, c = pauliprod(generator, key)
-        if c
-            result[key] = get(result, key, 0.0) + value
-        else
-            result[key] = get(result, key, 0.0) + value * cos(2 * angle)
+        if !c
+            result[key] += value * (cos(2 * angle) - 1)
             result[string] = get(result, string, 0.0) - imag(sign) * value * sin(2 * angle)
-            abs(result[key]) <= atol && pop!(result, key)
-            abs(result[string]) <= atol && pop!(result, string)
         end
     end
-    return result
+    return filter!(p->(abs(p.second) > atol), result)
 end
 
 function conjugate(sentence::AbstractDict{<:AbstractVector{Int8},Float64},
     generators::AbstractMatrix{Int8},
     angles::AbstractVector{<:Real};
-    atol::Real=0)::Dict{Vector{Int8},Float64}
+    atol::Real=0)
 
     size(generators, 2) == length(angles) || throw(DimensionMismatch("Generators and angles need to have equal size ($(size(generators, 2)) and $(length(angles)))"))
 
