@@ -1,6 +1,6 @@
-function iterativeoptimizer(ham::PauliSentence,
-    abstrings::AbstractVector{<:UPauli},
-    symgenerators::AbstractVector{<:AbstractVector{<:UPauli}},
+function reductive_optimizer(ham::PauliSentence,
+    abstrings::PauliList,
+    symgenerators::AbstractVector{<:PauliList},
     initangles::AbstractVector{<:AbstractVector{<:Real}}=[pi * rand(length(symgen)) for symgen in symgenerators];
     method::AbstractString="roto",
     maxiter::Integer=0,

@@ -1,24 +1,17 @@
 module Cartan
 
-export pauliprod, paulisum, paulidiff, pauliprod, conjugate, hamiltonian, algebra, dla, evenoddx, evenoddy, evenoddz, subalgfind, cartandecomp, involutionlessdecomp, subalgred, symsubspaces, cleangenerators!, optimizer, iterativeoptimizer, Symplectic
+using Reexport
+@reexport using SymplecticPauli: AbstractPauli, UPauli, Pauli, PauliList, PauliSentence
+using SymplecticPauli: com, counti, countx, county, countz, ad, ad!
 
-include("pauli_operations.jl")
+export hamiltonian, algebra, dla, evenoddx, evenoddy, evenoddz, typeIorII, typeIII, subalgfind, cartandecomp, involutionlessdecomp, subalgred, symsubspaces, cleangenerators!, optimizer, reductive_optimizer
+
+include("builders.jl")
 include("decompositions/involutions.jl")
 include("decompositions/cartan.jl")
 include("decompositions/involutionless_cartan.jl")
-include("decompositions/iterative_cartan.jl")
+include("decompositions/reductive_cartan.jl")
 include("optimizers/optimizer.jl")
-include("optimizers/iterative_optimizer.jl")
-
-module Symplectic
-# https://github.com/ooalshei/SymplecticPauli.jl/tree/dev
-include("../../SymplecticPauli.jl/src/SymplecticPauli.jl")
-using ..Cartan: _mutirr, _minanglefind
-using .SymplecticPauli
-
-include("symplectic_optimizers/optimizer.jl")
-include("symplectic_optimizers/iterative_optimizer.jl")
-
-end
+include("optimizers/reductive_optimizer.jl")
 
 end

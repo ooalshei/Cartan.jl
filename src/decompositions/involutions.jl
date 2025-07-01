@@ -1,29 +1,29 @@
 """
 This file contains different involutions.
 """
-function evenoddx(strings::AbstractMatrix{Int8})::Vector{Bool}
-    """
-    evenoddx
-    --------
-    This function finds the even-odd X Pauli count for a given set of Pauli strings.
-    """
-    return ((count(==(2), strings, dims=1) .% 2))[1, :]
+# evenoddx(strings::PauliList) = iseven.(countx.(strings))
+# evenoddy(strings::PauliList) = iseven.(county.(strings))
+# evenoddz(strings::PauliList) = iseven.(countz.(strings))
+
+for p in [:x, :y, :z]
+    @eval $(Symbol(:evenodd, p))(paulis::PauliList) = isodd.(count$(p).(paulis))
 end
 
-function evenoddy(strings::AbstractMatrix{Int8})::Vector{Bool}
-    """
-    evenoddy
-    --------
-    This function finds the even-odd Y Pauli count for a given set of Pauli strings.
-    """
-    return (count(==(3), strings, dims=1) .% 2)[1, :]
+function typeIorII(paulis::PauliList, string::Unsigned)
+    _check_string_length(string, paulis.qubits)
+    result = Vector{Bool}(undef, length(paulis))
+    for (i, pauli) in enumerate(paulis)
+        isequal(com(pauli, string, paulis.qubits), 0) ? (result[i] = isodd(county(pauli))) : (result[i] = iseven(county(pauli)))
+    end
+    return result
 end
+typeIorII(paulis::PauliList{<:Unsigned,Q}, string::AbstractPauli{<:Unsigned,Q}) where {Q} = typeIorII(paulis, string.string)
 
-function evenoddz(strings::AbstractMatrix{Int8})::Vector{Bool}
-    """
-    evenoddz
-    --------
-    This function finds the even-odd Z Pauli count for a given set of Pauli strings.
-    """
-    return (count(==(4), strings, dims=1) .% 2)[1, :]
+function typeIII(paulis::PauliList, string::Unsigned)
+    result = Vector{Bool}(undef, length(paulis))
+    for (i, pauli) in enumerate(paulis)
+        isequal(com(pauli, string, paulis.qubits), 0) ? (result[i] = 1) : (result[i] = 0)
+    end
+    return result
 end
+typeIII(paulis::PauliList{<:Unsigned,Q}, string::AbstractPauli{<:Unsigned,Q}) where {Q} = typeIII(paulis, string.string)
