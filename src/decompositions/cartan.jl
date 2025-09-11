@@ -1,4 +1,5 @@
-_dla(string::Unsigned, iter, Q::Integer) = PauliList(filter!(!iszero, com.(string, iter, Q)), Q, iscopy=false)
+_dla(string::Unsigned, iter, Q::Integer) =
+    PauliList(filter!(!iszero, com.(string, iter, Q)), Q, iscopy=false)
 
 function dla(paulis::PauliList)
     finalind = length(paulis)
@@ -35,5 +36,5 @@ function cartandecomp(paulis::PauliList, involution::Function)
     inds = involution(paulis)
     k = PauliList(paulis[inds], paulis.qubits, iscopy=false)
     m = PauliList(paulis[.!inds], paulis.qubits, iscopy=false)
-    return Dict("k" => k, "m" => m, "h" => subalgfind(m))
+    return Dict(:k => k, :m => m, :h => subalgfind(m))
 end

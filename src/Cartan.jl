@@ -4,7 +4,22 @@ using Reexport
 @reexport using SymplecticPauli: AbstractPauli, UPauli, Pauli, PauliList, PauliSentence
 using SymplecticPauli: com, counti, countx, county, countz, ad, ad!
 
-export hamiltonian, algebra, dla, evenoddx, evenoddy, evenoddz, typeIorII, typeIII, subalgfind, cartandecomp, involutionlessdecomp, subalgred, symsubspaces, cleangenerators!, optimizer, reductive_optimizer
+export hamiltonian,
+    algebra,
+    dla,
+    evenoddx,
+    evenoddy,
+    evenoddz,
+    typeIorII,
+    typeIII,
+    subalgfind,
+    cartandecomp,
+    involutionlessdecomp,
+    subalgred,
+    symsubspaces,
+    cleangenerators!,
+    optimizer,
+    reductive_optimizer
 
 include("builders.jl")
 include("decompositions/involutions.jl")
