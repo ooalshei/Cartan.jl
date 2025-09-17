@@ -171,6 +171,20 @@ function hamiltonian(
         coefficients = fill(-couplings[1], length(strings))
         coefficients[2*length(strings)÷3+1:end] *= couplings[2]
 
+    elseif uppercase(model) == "XXZ_EXT"
+        length(couplings) == 3 ||
+            throw(ArgumentError("Incorrect number of couplings. Expected 3 (J,Δ,g),
+                                got $(length(couplings)). H = -J(XX + YY + Δ ZZ) + gZ"))
+        strings = append!(
+            generatexx(n, T, pbc=pbc),
+            generateyy(n, T, pbc=pbc),
+            generatezz(n, T, pbc=pbc),
+            generatez(n, T),
+        )
+        coefficients = fill(-couplings[1], length(strings))
+        coefficients[2*(length(strings)-n)÷3+1:end-n] *= couplings[2]
+        coefficients[end-n+1:end] .= couplings[3]
+
     elseif uppercase(model) == "GN"
         length(couplings) == 3 || throw(
             ArgumentError(
