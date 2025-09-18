@@ -1,0 +1,4 @@
+[submodule "SymplecticPauli.jl"]
+	path = SymplecticPauli.jl
+	url = ../SymplecticPauli.jl
+	branch = main
