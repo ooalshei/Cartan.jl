@@ -1,9 +1,9 @@
 module Cartan
 
 @static if Sys.isunix()
-    run(`bash .install_git.sh`)
+    run(`bash $(@__DIR__)/../.install_git.sh`)
 elseif Sys.iswindows()
-    run(`cmd .install_git.cmd`)  
+    run(`cmd $(@__DIR__)/../.install_git.cmd`)
 end
 run(`git submodule update --init`)
 
