@@ -1,0 +1,4 @@
+[submodule "SymplecticPauli.jl"]
+	path = SymplecticPauli.jl
+	url = https://github.com/ooalshei/SymplecticPauli.jl
+	branch = main

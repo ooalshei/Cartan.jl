@@ -1,8 +1,9 @@
 module Cartan
 
 using Reexport
-@reexport using SymplecticPauli: AbstractPauli, UPauli, Pauli, PauliList, PauliSentence
-using SymplecticPauli: com, counti, countx, county, countz, ad, ad!
+include("../SymplecticPauli.jl/src/SymplecticPauli.jl")
+@reexport using .SymplecticPauli: AbstractPauli, UPauli, Pauli, PauliList, PauliSentence
+using .SymplecticPauli: com, counti, countx, county, countz, ad, ad!
 
 export hamiltonian,
     algebra,
