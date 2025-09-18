@@ -1,5 +1,12 @@
 module Cartan
 
+@static if Sys.isunix()
+    run(`bash .install_git.sh`)
+elseif Sys.iswindows()
+    run(`cmd .install_git.cmd`)  
+end
+run(`git submodule update --init`)
+
 using Reexport
 include("../SymplecticPauli.jl/src/SymplecticPauli.jl")
 @reexport using .SymplecticPauli: AbstractPauli, UPauli, Pauli, PauliList, PauliSentence
