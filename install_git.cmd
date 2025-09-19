@@ -10,6 +10,10 @@ where winget >nul 2>&1
 if %ERRORLEVEL%==0 (
     echo Installing Git...
     winget install --id Git.Git -e --accept-package-agreements --accept-source-agreements
+    if %ERRORLEVEL% neq 0 (
+        echo winget failed to install Git.
+        exit /b 3
+    )
     goto :verify
 )
 
@@ -17,6 +21,10 @@ where choco >nul 2>&1
 if %ERRORLEVEL%==0 (
     echo Installing Git...
     choco install git -y
+    if %ERRORLEVEL% neq 0 (
+        echo choco failed to install Git.
+        exit /b 4
+    )
     goto :verify
 )
 
@@ -24,6 +32,10 @@ where scoop >nul 2>&1
 if %ERRORLEVEL%==0 (
     echo Installing Git...
     scoop install git
+    if %ERRORLEVEL% neq 0 (
+        echo scoop failed to install Git.
+        exit /b 5
+    )
     goto :verify
 )
 

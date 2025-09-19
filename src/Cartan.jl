@@ -1,11 +1,11 @@
 module Cartan
 
 @static if Sys.isunix()
-    run(`bash $(@__DIR__)/../.install_git.sh`)
+    run(`bash $(@__DIR__)/../install_git.sh`)
 elseif Sys.iswindows()
-    run(`cmd $(@__DIR__)/../.install_git.cmd`)
+    run(`cmd /c $(@__DIR__)/../install_git.cmd`)
 end
-run(`git submodule update --init`)
+run(pipeline(`git -C $(@__DIR__)/.. submodule update --init`, stdout=devnull))
 
 using Reexport
 include("../SymplecticPauli.jl/src/SymplecticPauli.jl")
