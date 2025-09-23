@@ -106,7 +106,7 @@ function optimizer(
     if method == :roto
         angles = copy(initangles)
         points = Vector{Float64}(undef, 3)
-        errorcache = 1.0
+        # errorcache = 1.0
 
         iter = 0
         t = time()
@@ -139,6 +139,7 @@ function optimizer(
                                 return Dict(
                                     :H => transformedham,
                                     :angles => angles,
+                                    :error => sqrt(relerror),
                                     :iterations => iter,
                                     :calls => 3 * iter * length(angles),
                                     :time => time() - t,
@@ -147,6 +148,7 @@ function optimizer(
                                 return Dict(
                                     :H => transformedham,
                                     :angles => angles,
+                                    :error => sqrt(relerror),
                                     :iterations => iter,
                                     :calls => 3 * iter * length(angles),
                                 )
@@ -157,25 +159,30 @@ function optimizer(
                                 return Dict(
                                     :H => transformedham,
                                     :angles => angles,
+                                    :error => sqrt(relerror),
                                     :time => time() - t,
                                 )
                             else
-                                return Dict(:H => transformedham, :angles => angles)
+                                return Dict(
+                                    :H => transformedham,
+                                    :angles => angles,
+                                    :error => sqrt(relerror),
+                                )
                             end
                         end
 
-                    elseif (sqrt(errorcache) - sqrt(relerror)) <= 0
-                        println("Relative error after $iter iterations: $(sqrt(relerror))")
-                        println("Convergence too slow. Starting over.")
-                        println()
-                        iter = 0
-                        angles = pi * rand(length(generators))
-                        t = time()
-                        errorcache = 1.0
-                        # angles +=  convergence_tol * randn(size(angles))
+                    # elseif (sqrt(errorcache) - sqrt(relerror)) <= 0
+                    #     println("Relative error after $iter iterations: $(sqrt(relerror))")
+                    #     println("Convergence too slow. Starting over.")
+                    #     println()
+                    #     iter = 0
+                    #     angles = pi * rand(length(generators))
+                    #     t = time()
+                    #     errorcache = 1.0
+                    # angles +=  convergence_tol * randn(size(angles))
 
                     else
-                        errorcache = relerror
+                        # errorcache = relerror
                         iter % 50 == 0 && println(
                             "Relative error after $iter iterations: $(sqrt(relerror))",
                         )

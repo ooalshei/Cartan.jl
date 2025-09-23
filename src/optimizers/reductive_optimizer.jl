@@ -51,7 +51,7 @@ function _reductive_optimizer_step(
     )
     if method == :roto
         points = Vector{Float64}(undef, 3)
-        errorcache = 1.0
+        # errorcache = 1.0
 
         iter = 0
         t = time()
@@ -113,18 +113,18 @@ function _reductive_optimizer_step(
                                 return Dict(:H => transformedham, :angles => angles)
                             end
                         end
-                    elseif (sqrt(errorcache) - sqrt(relerror)) <= 0
-                        println("Relative error after $iter iterations: $(sqrt(relerror))")
-                        println("Convergence too slow. Starting over.")
-                        println()
-                        iter = 0
-                        angles = pi * rand(length(generators))
-                        t = time()
-                        errorcache = 1.0
-                        # angles +=  convergence_tol * randn(size(angles))
+                    # elseif (sqrt(errorcache) - sqrt(relerror)) <= 0
+                    #     println("Relative error after $iter iterations: $(sqrt(relerror))")
+                    #     println("Convergence too slow. Starting over.")
+                    #     println()
+                    #     iter = 0
+                    #     angles = pi * rand(length(generators))
+                    #     t = time()
+                    #     errorcache = 1.0
+                    # angles +=  convergence_tol * randn(size(angles))
 
                     else
-                        errorcache = relerror
+                        # errorcache = relerror
                         iter % 50 == 0 && println(
                             "Relative error after $iter iterations: $(sqrt(relerror))",
                         )
@@ -201,6 +201,7 @@ function reductive_optimizer(
             return Dict(
                 :H => finalham,
                 :angles => angles,
+                :error => sqrt(relerror),
                 :iterations => iter,
                 :calls => calls,
                 :time => t,
@@ -209,15 +210,21 @@ function reductive_optimizer(
             return Dict(
                 :H => finalham,
                 :angles => angles,
+                :error => sqrt(relerror),
                 :iterations => iter,
                 :calls => calls,
             )
         end
     else
         if timetrack
-            return Dict(:H => finalham, :angles => angles, :time => t)
+            return Dict(
+                :H => finalham,
+                :angles => angles,
+                :error => sqrt(relerror),
+                :time => t,
+            )
         else
-            return Dict(:H => finalham, :angles => angles)
+            return Dict(:H => finalham, :angles => angles, :error => sqrt(relerror))
         end
     end
 end
