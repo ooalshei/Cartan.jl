@@ -135,7 +135,7 @@ function hamiltonian(
             coefficients[end-n+1:end] *= couplings[2]
         end
 
-    elseif uppercase(model) == "CFIM"
+    elseif uppercase(model) == "MFIM"
         if length(couplings) != 3
             throw(ArgumentError("Incorrect number of couplings. Expected 3 (J,gh,gl),
                                 got $(length(couplings)). H = -J(XX + gh Z + gl X)"))
