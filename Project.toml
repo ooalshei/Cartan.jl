@@ -1,7 +1,7 @@
 name = "Cartan"
 uuid = "ab205724-bc94-4f9d-9de2-3802b5d24b63"
-authors = ["Omar Alsheikh"]
 version = "0.1.0"
+authors = ["Omar Alsheikh"]
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
