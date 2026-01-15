@@ -1,62 +1,58 @@
-using Cartan
 using Test
+using RedCarD
 
-@testset "Cartan.jl" begin
-    tfimham = Int8[[2, 2, 1] [1, 2, 2] [4, 1, 1] [1, 4, 1] [1, 1, 4]]
-    tfimdla = Int8[[2, 2, 1] [1, 2, 2] [4, 1, 1] [1, 4, 1] [1, 1, 4] [1, 2, 3] [1, 3, 2] [2, 3, 1] [3, 2, 1] [3, 4, 2] [3, 3, 1] [2, 4, 3] [2, 4, 2] [1, 3, 3] [3, 4, 3]]
-    tfimk = Int8[[1, 2, 3] [1, 3, 2] [2, 3, 1] [3, 2, 1] [3, 4, 2] [2, 4, 3]]
-    tfimm = Int8[[2, 2, 1] [1, 2, 2] [4, 1, 1] [1, 4, 1] [1, 1, 4] [3, 3, 1] [2, 4, 2] [1, 3, 3] [3, 4, 3]]
-    tfimh = Int8[[4, 1, 1] [1, 4, 1] [1, 1, 4]]
+@testset "DLA (dynamical Lie algebra)" begin
+    paulis = RedCarD.generatex(1, UInt)
+    append!(paulis, RedCarD.generatez(1, UInt))
+    closure = RedCarD.dla(paulis)
 
-    dl = dla(tfimham)
-    dla_test = false
-    if size(dl, 2) != size(tfimdla, 2)
-        @test dla_test
-    else
-        for string in eachcol(dl)
-            string in eachcol(tfimdla) && continue
-            @test dla_test
-            break
+    # original generators present
+    @test all(p -> p in closure, paulis)
+
+    # commutator of X and Z should generate Y
+    y = RedCarD.generatey(1, UInt)[1]
+    @test y in closure
+end
+
+@testset "Subalgebra finder" begin
+    paulis = RedCarD.generatez(3, UInt) # all Z strings commute
+    sub = RedCarD.subalgfind(paulis)
+    # sub should be abelian: all pairs commute
+    for i in eachindex(sub)
+        for j in i+1:length(sub)
+            @test RedCarD.com(sub[i], sub[j], sub.qubits).second
         end
-        @test !dla_test
+    end
+end
+
+@testset "Cartan decomposition" begin
+    paulis = RedCarD.generatex(2, UInt)
+    append!(paulis, RedCarD.generatez(2, UInt))
+
+    comp = RedCarD.cartandecomp(paulis, RedCarD.evenoddx)
+    @test isa(comp, Dict)
+    k = comp[:k]
+    m = comp[:m]
+    h = comp[:h]
+
+    # partition: k and m together equal original set and are disjoint
+    @test length(k) + length(m) == length(paulis)
+    for a in k
+        @test !(a in m)
+    end
+    for b in m
+        @test !(b in k)
     end
 
-    h = subalgfind(tfimm)
-    subalgfind_test = false
-    if size(h, 2) != size(tfimh, 2)
-        @test subalgfind_test
-    else
-        for string in eachcol(h)
-            string in eachcol(tfimh) && continue
-            @test subalgfind_test
-            break
-        end
-        @test !subalgfind_test
+    # h is subset of m
+    for hh in h
+        @test hh in m
     end
 
-    cd = cartandecomp(tfimdla, evenoddy)
-    k = cd["k"]
-    m = cd["m"]
-    h = cd["h"]
-    cartandecomp_test = false
-    if size(k, 2) != size(tfimk, 2) || size(m, 2) != size(tfimm, 2) || size(h, 2) != size(tfimh, 2)
-        @test cartandecomp_test
-    else
-        for string in eachcol(k)
-            string in eachcol(tfimk) && continue
-            @test cartandecomp_test
-            break
+    # h should be abelian
+    for i in eachindex(h)
+        for j in i+1:length(h)
+            @test RedCarD.com(h[i], h[j], h.qubits).second
         end
-        for string in eachcol(m)
-            string in eachcol(tfimm) && continue
-            @test cartandecomp_test
-            break
-        end
-        for string in eachcol(h)
-            string in eachcol(tfimh) && continue
-            @test cartandecomp_test
-            break
-        end
-        @test !cartandecomp_test
     end
 end

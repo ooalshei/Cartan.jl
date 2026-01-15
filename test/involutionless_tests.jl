@@ -1,36 +1,45 @@
-using Cartan
 using Test
+using RedCarD
 
-@testset "Cartan.jl" begin
-    tfimham = Int8[[2, 2, 1] [1, 2, 2] [4, 1, 1] [1, 4, 1] [1, 1, 4]]
-    tfimdla = Int8[[2, 2, 1] [1, 2, 2] [4, 1, 1] [1, 4, 1] [1, 1, 4] [1, 2, 3] [1, 3, 2] [2, 3, 1] [3, 2, 1] [3, 4, 2] [3, 3, 1] [2, 4, 3] [2, 4, 2] [1, 3, 3] [3, 4, 3]]
-    tfimk = Int8[[1, 2, 3] [1, 3, 2] [2, 3, 1] [3, 2, 1] [3, 4, 2] [2, 4, 3]]
-    tfimm = Int8[[2, 2, 1] [1, 2, 2] [4, 1, 1] [1, 4, 1] [1, 1, 4] [3, 3, 1] [2, 4, 2] [1, 3, 3] [3, 4, 3]]
-    tfimh = Int8[[4, 1, 1] [1, 4, 1] [1, 1, 4]]
+@testset "Involutionless Cartan decomposition - basic" begin
+    paulis = RedCarD.generatex(1, UInt)
+    append!(paulis, RedCarD.generatez(1, UInt))
 
-    cd = involutionlessdecomp(tfimham)
-    k = cd["k"]
-    m = cd["m"]
-    h = cd["h"]
-    cartandecomp_test = false
-    if size(k, 2) != size(tfimk, 2) || size(m, 2) != size(tfimm, 2) || size(h, 2) != size(tfimh, 2)
-        @test cartandecomp_test
+    comp = RedCarD.involutionlessdecomp(paulis)
+    @test isa(comp, Dict)
+
+    g = comp[:g]
+    h = comp[:h]
+    k = comp[:k]
+    m = comp[:m]
+
+    @test isa(g, RedCarD.PauliList)
+    @test isa(h, RedCarD.PauliList)
+
+    # original generators should be in the generated algebra
+    @test all(p -> p in g, paulis)
+
+    # k and m are either PauliLists or `nothing` (no decomposition)
+    @test (k === nothing) || isa(k, RedCarD.PauliList)
+    @test (m === nothing) || isa(m, RedCarD.PauliList)
+
+    # if k and m are present they should be disjoint and partition g
+    if isa(k, RedCarD.PauliList) && isa(m, RedCarD.PauliList)
+        @test length(k) + length(m) == length(g)
+        for a in k
+            @test !(a in m)
+        end
+        for b in m
+            @test !(b in k)
+        end
+        # h should be subset of m
+        for hh in h
+            @test hh in m
+        end
     else
-        for string in eachcol(k)
-            string in eachcol(tfimk) && continue
-            @test cartandecomp_test
-            break
+        # otherwise h should be subset of g
+        for hh in h
+            @test hh in g
         end
-        for string in eachcol(m)
-            string in eachcol(tfimm) && continue
-            @test cartandecomp_test
-            break
-        end
-        for string in eachcol(h)
-            string in eachcol(tfimh) && continue
-            @test cartandecomp_test
-            break
-        end
-        @test !cartandecomp_test
     end
 end
