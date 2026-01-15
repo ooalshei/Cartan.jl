@@ -1,4 +1,4 @@
-name = "Cartan"
+name = "RedCarD"
 uuid = "ab205724-bc94-4f9d-9de2-3802b5d24b63"
 version = "0.1.0"
 authors = ["Omar Alsheikh"]
@@ -9,14 +9,16 @@ Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 SymplecticPauli = "679b03a7-bf4c-4f28-9f4b-1a046e8c8a8d"
 
 [compat]
-LinearAlgebra = "1.11"
+LinearAlgebra = "1.12"
 Reexport = "1.2"
-SymplecticPauli = "0.1"
-julia = "1.11"
+julia = "1.12"
 
 [extras]
-SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
 
 [targets]
 test = ["Test", "SafeTestsets"]
+
+[workspace]
+projects = ["docs"]
