@@ -83,6 +83,16 @@ function generateyx(n::Integer, ::Type{T}=UInt; pbc::Bool=false) where {T<:Unsig
     return result
 end
 
+"""
+    hamiltonian(model, n, couplings, T=UInt; nf=0, pbc=false)
+
+Construct common lattice Hamiltonians.
+
+Output a `PauliSentence` representing the Hamiltonian specified by `model` on `n` qubits
+with given `couplings`. Periodic boundary conditions can be included with `pbc=true`.
+The `"GN"` and `"SYK"` models support an additional `nf` argument specifying the number of
+flavors.
+"""
 function hamiltonian(
     model::AbstractString,
     n::Integer,
@@ -146,6 +156,25 @@ function hamiltonian(
             coefficients = fill(-couplings[1], length(strings))
             coefficients[end-2*n+1:end-n] *= couplings[2]
             coefficients[end-n+1:end] *= couplings[3]
+        end
+
+    elseif uppercase(model) == "HIM"
+        if length(couplings) != 4
+            throw(ArgumentError("Incorrect number of couplings. Expected 4 (J,gh,gl,ℓ),
+                                got $(length(couplings)). H = -J(ℓ)(XX + gh Z + gl X)"))
+        else
+            strings = append!(generatexx(n, T, pbc=pbc), generatez(n, T), generatex(n, T))
+            coefficients = fill(-couplings[1], length(strings))
+            η = [cosh(-couplings[4] + i * 2 * couplings[4] / (n - 1)) for i in 1:n]  # η_i
+            x = pbc ? n : n - 1
+            for i in 1:n-1
+                coefficients[i] *= (η[i] + η[i+1] / 2)  # XX couplings
+                coefficients[i+x] *= couplings[2] * η[i]  # Z couplings
+                coefficients[i+x+n] *= couplings[3] * η[i]  # X couplings
+            end
+            pbc && (coefficients[n] *= (η[1] + η[end]) / 2)  # XX coupling
+            coefficients[end-n] *= couplings[2] * η[end]  # Z coupling
+            coefficients[end] *= couplings[3] * η[end]  # X coupling
         end
 
     elseif uppercase(model) == "HEISENBERG"
@@ -220,6 +249,8 @@ function hamiltonian(
             fill(2 * couplings[3] - 4 * couplings[2] * (nf - 1), n * nf)
             fill(-4 * couplings[2], n * nf * (nf - 1) ÷ 2)
         ]
+
+    elseif uppercase(model) == "SYK"
 
     else
         throw(ArgumentError("Model not recognized."))

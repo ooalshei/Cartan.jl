@@ -4,7 +4,7 @@ function errorfind(ham::PauliSentence, subalgebra::PauliList)::Float64
     for (key, value) in ham
         fullnorm += abs2(value)
         for h in subalgebra
-            com(h, key, ham.qubits) == 0 || (errornorm += abs2(value); break)
+            com(h, key, ham.qubits).second || (errornorm += abs2(value); break)
         end
     end
     return errornorm / fullnorm
@@ -14,7 +14,7 @@ function _filter(ham::PauliSentence, subalgebra::PauliList)
     filteredham = copy(ham)
     for key in keys(ham)
         for h in subalgebra
-            if com(h, key, ham.qubits) != 0
+            if !com(h, key, ham.qubits).second
                 delete!(filteredham, key)
                 break
             end
@@ -25,7 +25,7 @@ end
 
 function _reductive_optimizer_step(
     ham::PauliSentence,
-    abstrings::PauliList,
+    bstrings::PauliList,
     generators::PauliList,
     angles::AbstractVector{<:Real},
     previous_ham::PauliSentence;
@@ -46,7 +46,7 @@ function _reductive_optimizer_step(
     )
 
     subalgelem = PauliSentence(
-        Dict{keytype(ham),Float64}(abstrings[end] => im^county(abstrings[end], ham.qubits)),
+        Dict{keytype(ham),Float64}(bstrings[end] => im^county(bstrings[end], ham.qubits)),
         ham.qubits,
     )
     if method == :roto
@@ -76,7 +76,7 @@ function _reductive_optimizer_step(
                         -reverse(angles),
                         atol=coeff_tol,
                     )
-                    relerror = errorfind(transformedham, abstrings)
+                    relerror = errorfind(transformedham, bstrings)
                     if (relerror <= convergence_tol^2) | (iter == maxiter)
                         if iter == maxiter
                             println("Max iterations reached.")
@@ -136,9 +136,53 @@ function _reductive_optimizer_step(
     end
 end
 
+@doc raw"""
+    reductive_optimizer
+
+Perform a reductive KHK optimization.
+
+# Arguments
+- `ham::PauliSentence`: the Hamiltonian to be transformed.
+- `bstrings::PauliList`: the strings that generate (under multiplication) the target Abelian
+subalgebra to rotate into.
+- `symgenerators::AbstractVector{<:PauliList}`: the elements of the ``\mathfrak{k}``,
+fragmented with respect to `bstrings`. See [`fragmentedsubspaces`](@ref).
+- `initangles::AbstractVector{<:AbstractVector{<:Real}}=[
+    pi * rand(length(symgen)) for symgen in symgenerators
+]`: initial angles for the generators.
+- `method::Symbol=:roto`: optimization method to use (currently only `:roto` is supported).
+- `maxiter::Integer=0`: maximum number of iterations (0 for unlimited).
+- `convergence_tol::Real=1e-6`: tolerance for convergence.
+- `coeff_tol::Real=0`: tolerance for ignoring small coefficients in the Pauli sentences.
+- `toltype::Symbol=:relerror`: type of tolerance to use (currently only `:relerror` is
+supported).
+- `itertrack::Bool=false`: whether to track the number of iterations and calls.
+- `timetrack::Bool=false`: whether to track the total time taken.
+
+Rotate `ham` reductively into the Cartan subalgebra using the fragmented generators in
+`symgenerators`. `ham` is first transformed so that it commutes with the first element in
+`bstrings`. Then it is subsequently transformed until it commutes with all elements in
+`bstrings`. The end result lies in the Cartan subalgebra. The optimization starts from
+`initangles` and proceeds until the error is below `convergence_tol` or `maxiter` is
+reached. Small coefficients below `coeff_tol` are ignored during the optimization. If
+`itertrack` is true, the number of iterations and function calls are tracked. If `timetrack`
+is true, the total time taken is tracked.
+
+# Notes
+- Currently, only the [rotosolve](https://quantum-journal.org/papers/q-2021-01-28-391/)
+optimizer is supported. This optimizer iteratively updates the angles for each generator
+individually to minimize the cost function. This method is crucial for the quantum-assisted
+optimization algorithm described in the [paper](https://arxiv.org/abs/2512.06070).
+- Currently, the only available option for `toltype` is `:relerror`, which uses the relative
+error between `ham` and its projection onto the Cartan `subalgebra` as the convergence
+metric. This is the ratio of the Hilbert-Schmidt norm of the part of the transformed `ham`
+that lies outside of the `subalgebra` to the Hilbert-Schmidt norm of `ham`.
+
+See also [`optimizer`](@ref).
+"""
 function reductive_optimizer(
     ham::PauliSentence,
-    abstrings::PauliList,
+    bstrings::PauliList,
     symgenerators::AbstractVector{<:PauliList},
     initangles::AbstractVector{<:AbstractVector{<:Real}}=[
         pi * rand(length(symgen)) for symgen in symgenerators
@@ -159,12 +203,12 @@ function reductive_optimizer(
     stepham = ham
     previous_ham = ham
     t = 0.0
-    for i in eachindex(abstrings)
+    for i in eachindex(bstrings)
         # ittol = max(1e-4, convergence_tol * 10.0^(1 - i))
         println("Begin optimization for abelian element $i")
         opt = _reductive_optimizer_step(
             stepham,
-            abstrings[1:i],
+            bstrings[1:i],
             symgenerators[i],
             angles[i],
             previous_ham,
@@ -178,7 +222,7 @@ function reductive_optimizer(
         )
         println()
         previous_ham = opt[:H]
-        stepham = _filter(opt[:H], abstrings[1:i])
+        stepham = _filter(opt[:H], bstrings[1:i])
         angles[i] = opt[:angles]
         if itertrack
             iter += opt[:iterations]
@@ -192,7 +236,7 @@ function reductive_optimizer(
         -reverse!(vcat(angles...)),
         atol=coeff_tol,
     )
-    relerror = errorfind!(finalham, abstrings)
+    relerror = errorfind!(finalham, bstrings)
     println("Combined relative error: $(sqrt(relerror))")
 
     println("Optimization complete. Combined relative error: $(sqrt(relerror))")

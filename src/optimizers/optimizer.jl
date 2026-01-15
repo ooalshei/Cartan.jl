@@ -41,7 +41,27 @@ end
     nothing
 end
 
-function _rotostep!(
+function _serial_rotostep!(
+    angles::AbstractVector{<:Real},
+    points::AbstractVector{<:Real},
+    partialelem::PauliSentence,
+    ham::PauliSentence,
+    generators::PauliList;
+    atol::Real,
+)
+
+    partialham = ham
+    @inbounds for i in eachindex(angles)
+        pauligen = UPauli(generators[i], ham.qubits)
+        ad!(partialelem, pauligen, -angles[i], atol=atol)
+        _cost!(points, pauligen, partialelem, partialham, atol=atol)
+        angles[i] = _minanglefind(points)
+        ad!(partialham, pauligen, -angles[i], atol=atol)
+    end
+    return partialham
+end
+
+function _parallel_rotostep!(
     angles::AbstractVector{<:Real},
     points::AbstractVector{<:Real},
     partialelem::PauliSentence,
@@ -62,6 +82,8 @@ function _rotostep!(
     return fetch(task)
 end
 
+const _rotostep! = Threads.nthreads() == 1 ? _serial_rotostep! : _parallel_rotostep!
+
 function errorfind!(ham::PauliSentence, subalgebra::PauliList)::Float64
     errornorm = 0.0
     fullnorm = 0.0
@@ -70,7 +92,7 @@ function errorfind!(ham::PauliSentence, subalgebra::PauliList)::Float64
         # unique!(com.(subalgebra, key, ham.qubits)) == [0] ||
         #     (errornorm += abs2(value); delete!(ham, key))
         for h in subalgebra
-            if com(h, key, ham.qubits) != 0
+            if !com(h, key, ham.qubits).second
                 errornorm += abs2(value)
                 delete!(ham, key)
                 break
@@ -80,6 +102,43 @@ function errorfind!(ham::PauliSentence, subalgebra::PauliList)::Float64
     return errornorm / fullnorm
 end
 
+@doc raw"""
+    optimizer
+
+Perform the KHK optimization.
+
+# Arguments
+- `ham::PauliSentence`: the Hamiltonian to be transformed.
+- `subalgebra::PauliList`: the target Abelian subalgebra to rotate into.
+- `generators::PauliList`: the elements of the ``\mathfrak{k}`` subalgebra.
+- `initangles::AbstractVector{<:Real}=pi * rand(length(generators))`: initial angles for the
+generators.
+- `method::Symbol=:roto`: optimization method to use (currently only `:roto` is supported).
+- `maxiter::Integer=0`: maximum number of iterations (0 for unlimited).
+- `convergence_tol::Real=1e-6`: tolerance for convergence.
+- `coeff_tol::Real=0`: tolerance for ignoring small coefficients in the Pauli sentences.
+- `toltype::Symbol=:relerror`: type of tolerance to use (currently only `:relerror` is
+supported).
+- `itertrack::Bool=false`: whether to track the number of iterations and calls.
+- `timetrack::Bool=false`: whether to track the total time taken.
+
+Rotate `ham` into the specificed Cartan `subalgebra` using `generators`. The optimization
+starts from `initangles` and proceeds until the error is below `convergence_tol` or
+`maxiter` is reached. Small coefficients below `coeff_tol` are ignored during the
+optimization. If `itertrack` is true, the number of iterations and function calls are
+tracked. If `timetrack` is true, the total time taken is tracked.
+
+# Notes
+- Currently, only the [rotosolve](https://quantum-journal.org/papers/q-2021-01-28-391/)
+optimizer is supported. This optimizer iteratively updates the angles for each generator
+individually to minimize the cost function.
+- Currently, the only available option for `toltype` is `:relerror`, which uses the relative
+error between `ham` and its projection onto the Cartan `subalgebra` as the convergence
+metric. This is the ratio of the Hilbert-Schmidt norm of the part of the transformed `ham`
+that lies outside of the `subalgebra` to the Hilbert-Schmidt norm of `ham`.
+
+See also [`reductive_optimizer`](@ref).
+"""
 function optimizer(
     ham::PauliSentence,
     subalgebra::PauliList,
