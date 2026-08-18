@@ -144,5 +144,7 @@ verified during that build.
 
 The algorithms implemented here follow
 
-> *Cartan decompositions for Pauli operator algebras*,
-> [arXiv:2512.06070](https://arxiv.org/abs/2512.06070)
+>*Fixed Depth Hamiltonian Simulation via Cartan Decomposition*,
+>[Phys. Rev. Lett. 129, 070501](https://doi.org/10.1103/PhysRevLett.129.070501).  
+>*RedCarD: A Quantum Assisted Algorithm for Fixed-Depth Unitary Synthesis via Cartan Decomposition*,
+>[arXiv:2512.06070](https://arxiv.org/abs/2512.06070).

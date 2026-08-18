@@ -64,7 +64,7 @@ A Cartan decomposition is a split $\mathfrak{g} = \mathfrak{k} \oplus \mathfrak{
 [\mathfrak{m},\mathfrak{m}] \subseteq \mathfrak{k},
 ```
 
-and it must put $H$ in $\mathfrak{m}$. [`involutionlessdecomp`](@ref) finds one without
+and it must put $iH$ in $\mathfrak{m}$. [`involutionlessdecomp`](@ref) finds one without
 being told which involution to use: it grows the algebra from the generators while carrying
 a sign, forced to $-1$ on everything it started from, and propagates that sign through every
 commutator. If no string is ever reached with both signs, the assignment *is* a Cartan
@@ -121,7 +121,7 @@ The returned `NamedTuple` carries everything the circuit needs:
 | `result.error` | relative Hilbert-Schmidt weight left outside $\mathfrak{h}$ |
 
 That worked, but it took around 1800 sweeps over all twelve angles at once. Rotosolve is a
-*local* method, and this cost function has all $\lvert\mathfrak{k}\rvert$ angles coupled through a
+*local* method, and this cost function has all $\dim \mathfrak{k}$ angles coupled through a
 single scalar. Four qubits is about where that stops being true: at six the same call runs
 20000 sweeps and still sits three orders of magnitude short of the tolerance.
 
@@ -130,10 +130,11 @@ single scalar. Four qubits is about where that stops being true: at six the same
 The [paper](https://arxiv.org/abs/2512.06070) fixes this by refusing to ask for all of
 $\mathfrak{h}$ at once. Two observations make that possible.
 
-First, $\mathfrak{h}$ does not need $\lvert\mathfrak{h}\rvert$ conditions imposed on it. Its elements
-are products of a much smaller *multiplicative* generating set $\{b_1,\dots,b_r\}$, and a
-Hamiltonian that commutes with every $b_i$ commutes with all of $\mathfrak{h}$.
-[`subalgred`](@ref) finds that set:
+First, $\mathfrak{h}$ does not need $\dim \mathfrak{h}$ conditions imposed on it. Its elements
+are products of a smaller *multiplicative* generating set $\{b_1,\dots,b_r\}$, and a
+Hamiltonian that commutes with every $b_i$ commutes with all of $\mathfrak{h}$. For TFIM/TFXY,
+$\mathfrak{h}$ will not be reduced. Beyond free-fermionic models, such as Heisenberg, we can drop
+some terms. [`subalgred`](@ref) finds that set:
 
 ```jldoctest tutorial
 julia> bstrings = subalgred(decomposition.h);
@@ -196,7 +197,7 @@ julia> length(reduced.H)            # same destination: H lands in 𝔥
 ```
 
 There is a second reason to prefer this. Each stage minimizes
-$f_i = \langle b_i,\, K_i^\dagger H_{i-1} K_i\rangle$, the expectation value of a *single*
+$f_r = \langle Kb_rK^\dagger, H_{r-1} \rangle$, the expectation value of a *single*
 Pauli string, which is something a quantum computer can measure directly — that is what makes
 the quantum-assisted version of the algorithm possible. The one-shot cost, a weighted sum
 over all of $\mathfrak{h}$, is not.
@@ -206,18 +207,18 @@ over all of $\mathfrak{h}$, is not.
 Same model, same tolerance ($10^{-8}$), best of three random starts each, with the one-shot
 optimizer capped at 20000 sweeps:
 
-| Qubits | $\dim\mathfrak{g}$ | $\lvert\mathfrak{k}\rvert$ | one-shot sweeps | cost evaluations | time | error | reductive sweeps | cost evaluations | time | error |
+| Qubits | $\dim\mathfrak{g}$ | $\dim\mathfrak{k}$ | one-shot sweeps | cost evaluations | time | error | reductive sweeps | cost evaluations | time | error |
 |--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
 | 4 | 28 | 12 | 1780 | 64080 | 0.017 s | 9.1e-9 | 90 | 1320 | 0.0004 s | 1.0e-9 |
-| 6 | 66 | 30 | 20000 † | 1800000 | 0.81 s | 1.6e-2 | 240 | 5580 | 0.0022 s | 9.3e-9 |
-| 8 | 120 | 56 | 20000 † | 3360000 | 1.91 s | 1.2e-2 | 450 | 13920 | 0.0073 s | 6.7e-9 |
-| 10 | 190 | 90 | 20000 † | 5400000 | 4.63 s | 4.1e-3 | 800 | 32460 | 0.026 s | 8.8e-9 |
+| 6 | 66 | 30 | 20000<sup>†</sup> | 1800000 | 0.81 s | 1.6e-2 | 240 | 5580 | 0.0022 s | 9.3e-9 |
+| 8 | 120 | 56 | 20000<sup>†</sup> | 3360000 | 1.91 s | 1.2e-2 | 450 | 13920 | 0.0073 s | 6.7e-9 |
+| 10 | 190 | 90 | 20000<sup>†</sup> | 5400000 | 4.63 s | 4.1e-3 | 800 | 32460 | 0.026 s | 8.8e-9 |
 
-† hit the iteration cap without reaching the tolerance, from all three starts.
+<sup>†</sup> hit the iteration cap without reaching the tolerance, from all three starts.
 
 The reductive algorithm converges at every size tested, and where both converge it needs
 about 20× fewer sweeps and 50× fewer cost evaluations. The gap widens with system size,
-because the one-shot problem couples more angles as $\lvert\mathfrak{k}\rvert$ grows while the
+because the one-shot problem couples more angles as $\dim \mathfrak{k}$ grows while the
 reductive stages stay the same size — the largest fragment is $2(Q-1)$ generators regardless
 of how big $\mathfrak{k}$ gets.
 

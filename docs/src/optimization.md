@@ -9,13 +9,13 @@ for the angles.
 
 ## The cost function
 
-Pick any element $v$ of the Cartan subalgebra with distinct coefficients, and minimize
+For an element $v$ of the Cartan subalgebra, we minimize
 
 ```math
-f(\theta) = \big\langle\, v,\; K(\theta)^\dagger H K(\theta) \,\big\rangle .
+f(\vec{\theta}) = \left\langle K(\vec{\theta}) v K(\vec{\theta})^\dagger, H \right\rangle .
 ```
 
-Its minimum is attained exactly when $K^\dagger H K$ lies in $\mathfrak{h}$, which is the
+Its minimum is attained exactly when $iK^\dagger H K$ lies in $\mathfrak{h}$, which is the
 statement being solved for. The distinct coefficients matter — they are what stops different
 Cartan elements from being traded off against each other — and `optimizer` builds them
 internally from a sequence of mutually irrational values.
