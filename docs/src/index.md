@@ -1,2 +1,207 @@
-# RedCarD.jl Documentation
+```@meta
+CurrentModule = RedCarD
+```
 
+# RedCarD.jl
+
+**Red**uctive **Car**tan **D**ecompositions of Pauli operator algebras — and the
+fixed-depth quantum circuits they produce.
+
+Simulating $e^{-iHt}$ normally costs circuit depth that grows with $t$. If the Pauli
+operators in $H$ close into a Lie algebra $\mathfrak{g}$ that admits a Cartan decomposition
+$\mathfrak{g} = \mathfrak{k} \oplus \mathfrak{m}$, that trade disappears. Writing
+
+```math
+H = K\,h\,K^\dagger, \qquad
+K = \prod_j e^{i\theta_j k_j},\quad k_j \in \mathfrak{k}, \quad h \in \mathfrak{h},
+```
+
+with $\mathfrak{h} \subseteq \mathfrak{m}$ a *Cartan subalgebra* — a maximal set of mutually
+commuting elements — the time evolution becomes
+
+```math
+e^{-iHt} = K\,e^{-iht}\,K^\dagger ,
+```
+
+and since everything inside $\mathfrak{h}$ commutes, $e^{-iht}$ is a layer of independent
+rotations. The depth is set by $\lvert\mathfrak{k}\rvert$ and $\lvert\mathfrak{h}\rvert$,
+and is the same for $t = 1$ as for $t = 10^6$.
+
+RedCarD.jl builds that object: it constructs the algebra, splits it, finds the Cartan
+subalgebra, and solves for the angles $\theta_j$.
+
+## Why *reductive*
+
+The existence of $K$ is a theorem; finding it is an optimization. The standard route fixes a
+*dense* element $v = \sum_j c_j h_j \in \mathfrak{h}$ with incommensurate coefficients
+$c_j$ and minimizes
+
+```math
+f(\boldsymbol\theta)
+  = \big\langle\, v,\; K(\boldsymbol\theta)^\dagger H K(\boldsymbol\theta) \,\big\rangle,
+\qquad
+\langle A, B\rangle = \frac{1}{2^{Q}}\,\mathrm{Tr}\!\left[A B\right],
+```
+
+over all $\lvert\mathfrak{k}\rvert$ angles at once. Its minimizer is the $K$ we want, but
+every angle is coupled to every other through a single scalar, and the local optimizer used
+to solve it stalls once $\mathfrak{k}$ grows past a few dozen elements.
+
+The **reductive** decomposition — the one this package is named for — exploits something a
+generic Lie algebra does not have: Pauli strings *multiply*. Every element of $\mathfrak{h}$
+is a product of a small generating set
+
+```math
+\mathfrak{h} \subseteq \big\langle\, b_1, b_2, \ldots, b_r \,\big\rangle ,
+\qquad b_i \in \mathfrak{h} ,
+```
+
+with $r$ as small as $\log_2\!\big(\lvert\mathfrak{h}\rvert + 1\big)$, since $r$
+independent strings already generate $2^r - 1$ of them. A Hamiltonian that commutes with
+every $b_i$ therefore commutes with all of $\mathfrak{h}$, which replaces
+$\lvert\mathfrak{h}\rvert$ conditions by $r$ of them. The same generators split
+$\mathfrak{k}$: each $k \in \mathfrak{k}$ belongs to the piece indexed by the *first*
+generator it fails to commute with,
+
+```math
+\mathfrak{k}_i = \big\{\, k \in \mathfrak{k} \;:\;
+  [k, b_i] \neq 0 \;\text{ and }\; [k, b_j] = 0 \ \ \forall\, j < i \,\big\} ,
+\qquad
+\mathfrak{k} \supseteq \mathfrak{k}_1 \sqcup \cdots \sqcup \mathfrak{k}_r ,
+```
+
+the leftovers being the elements that commute with all of $\mathfrak{h}$ and therefore
+cannot move $H$ at all. The circuit factorizes to match,
+
+```math
+K = K_1 K_2 \cdots K_r , \qquad
+K_i = \prod_{k \in \mathfrak{k}_i} e^{i\theta_k k} ,
+```
+
+and the angles are solved for one stage at a time. Stage $i$ minimizes
+
+```math
+f_i\big(\boldsymbol\theta^{(i)}\big)
+  = \big\langle\, b_i,\; K_i^\dagger H_{i-1} K_i \,\big\rangle ,
+\qquad H_0 = H ,
+```
+
+and hands on $H_i$, the part of the rotated Hamiltonian that commutes with
+$b_1,\ldots,b_i$. Because $\mathfrak{k}_i$ commutes with every earlier generator, no stage
+can undo the one before it — the constraints accumulate.
+
+Two things follow. The optimization is now $r$ small independent problems instead of one
+large coupled one, which is what makes it converge at sizes where the dense cost function
+does not. And each $f_i$ is the expectation value of a *single* Pauli string rather than a
+weighted sum over all of $\mathfrak{h}$ — something a quantum computer can measure directly,
+which is what the quantum-assisted form of the algorithm rests on.
+
+## Installation
+
+Neither package is registered, so install the dependency first:
+
+```julia
+using Pkg
+Pkg.add(url="https://github.com/ooalshei/SymplecticPauli.jl")
+Pkg.add(url="https://github.com/ooalshei/Cartan.jl")
+```
+
+## Quick start
+
+```jldoctest quickstart
+julia> using RedCarD
+
+julia> H = hamiltonian("TFIM", 4, [1.0, 0.5]);   # -J Σ XᵢXᵢ₊₁ - Jg Σ Zᵢ
+
+julia> algebra = PauliList(collect(keys(H)), 4);
+
+julia> decomposition = involutionlessdecomp(algebra);
+
+julia> length(decomposition.g), length(decomposition.k), length(decomposition.m)
+(28, 12, 16)
+
+julia> tostring(decomposition.h)      # the commuting subalgebra H is rotated into
+4-element Vector{String}:
+ "-Z--"
+ "--Z-"
+ "Z---"
+ "---Z"
+```
+
+## Solving for the angles
+
+One call turns that decomposition into a circuit by varying every generator of
+$\mathfrak{k}$ at once:
+
+```julia
+result = optimizer(H, decomposition.h, decomposition.k; convergence_tol = 1e-8)
+```
+
+```
+Converged in 1230 iterations.
+Final relative error: 8.685465962697732e-9
+```
+
+`result.H` is $h$, `result.generators` and `result.angles` are the $k_j$ and $\theta_j$
+that build $K$.
+
+The reductive route builds the $b_i$ and the $\mathfrak{k}_i$ of the previous section and
+solves stage by stage:
+
+```julia
+bstrings  = subalgred(decomposition.h)                      # the generators bᵢ of 𝔥
+fragments = fragmentedsubspaces(decomposition.k, bstrings)  # the pieces 𝔨ᵢ of 𝔨
+cleangenerators!(fragments, bstrings)                       # drop any bᵢ nothing acts on
+
+result = reductive_optimizer(H, bstrings, fragments; convergence_tol = 1e-8)
+```
+
+`result.generators` and `result.angles` come back fragmented the same way, one block per
+$b_i$; concatenating them in order gives the same $K$.
+
+Same model, same tolerance, best of three random starts (one-shot capped at 20000 sweeps):
+
+| Qubits | $\lvert\mathfrak{k}\rvert$ | one-shot sweeps | error | reductive sweeps | error |
+|--:|--:|--:|--:|--:|--:|
+| 4 | 12 | 1780 | 9.1e-9 | 90 | 1.0e-9 |
+| 6 | 30 | 20000 † | 1.6e-2 | 240 | 9.3e-9 |
+| 8 | 56 | 20000 † | 1.2e-2 | 450 | 6.7e-9 |
+| 10 | 90 | 20000 † | 4.1e-3 | 800 | 8.8e-9 |
+
+† hit the cap without reaching the tolerance. Both routes produce the same circuit depth;
+only one of them gets there. The [Tutorial](@ref) walks through both and checks that the
+factorization really does reproduce `H`.
+
+## The pipeline
+
+| Step | What it does | Functions |
+|:--|:--|:--|
+| Build | model Hamiltonians as Pauli sentences | [`hamiltonian`](@ref) |
+| Close | the Lie algebra generated by a set of Paulis | [`dla`](@ref) |
+| Split | $\mathfrak{g} = \mathfrak{k} \oplus \mathfrak{m}$ | [`cartandecomp`](@ref), [`involutionlessdecomp`](@ref) |
+| Reduce | pick $\mathfrak{h}$, its multiplicative generators, and the matching $\mathfrak{k}$ fragments | [`subalgfind`](@ref), [`subalgred`](@ref), [`fragmentedsubspaces`](@ref), [`cleangenerators!`](@ref) |
+| Solve | for the circuit angles, all at once or one Cartan generator at a time | [`optimizer`](@ref), [`reductive_optimizer`](@ref) |
+
+## Where things live
+
+Pauli operators are symplectic bit strings: `2Q` bits per operator, the low half marking
+`X` support and the high half `Z` support. That representation, the containers built on it
+(`PauliList`, `PauliSentence`) and the operations on them (`com`,
+`ad`, `tostring`, `tomatrix`) come from
+[SymplecticPauli.jl](https://github.com/ooalshei/SymplecticPauli.jl) and are re-exported
+here, so `using RedCarD` is all you need.
+
+## Threading
+
+The algebra closures and the optimizer parallelize themselves when the session has more than
+one thread; start Julia with `julia -t auto` to use it. The algebra a closure returns is the
+same either way, but its elements are discovered in a different order, so the generator
+ordering — and with it the particular set of angles the optimizer lands on — can differ
+between a serial and a threaded run. Every such solution is equally valid.
+
+## Reference
+
+The algorithms implemented here follow
+
+> *Cartan decompositions for Pauli operator algebras*,
+> [arXiv:2512.06070](https://arxiv.org/abs/2512.06070)

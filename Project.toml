@@ -1,7 +1,10 @@
 name = "RedCarD"
 uuid = "ab205724-bc94-4f9d-9de2-3802b5d24b63"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Omar Alsheikh"]
+
+[workspace]
+projects = ["docs"]
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
@@ -14,11 +17,8 @@ Reexport = "1.2"
 julia = "1.12"
 
 [extras]
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["Test", "SafeTestsets"]
-
-[workspace]
-projects = ["docs"]
