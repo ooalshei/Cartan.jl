@@ -19,7 +19,12 @@ makedocs(
     ],
     format=Documenter.HTML(
         prettyurls=get(ENV, "CI", nothing) == "true",
-        canonical="https://ooalshei.github.io/Cartan.jl",
-        repolink="https://github.com/ooalshei/Cartan.jl",
+        canonical="https://ooalshei.github.io/RedCarD.jl",
+        repolink="https://github.com/ooalshei/RedCarD.jl",
     ),
+)
+
+deploydocs(
+    repo = "https://github.com/ooalshei/RedCarD.jl",
+    devbranch = "main"
 )
