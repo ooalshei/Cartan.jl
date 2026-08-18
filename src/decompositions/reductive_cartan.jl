@@ -30,21 +30,24 @@ julia> print(b)
 ["Z--", "-Z-", "--Z"]
 ```
 """
-function subalgred(halg::PauliList)
-    bstrings = PauliList(halg[1:1], halg.qubits, iscopy=false)
-    multstrings = halg[1:1]
+function subalgred(halg::PauliList{T,Q}) where {T,Q}
+    isempty(halg) && return PauliList{T,Q}(T[], iscopy=false, check=false)
+    bstrings = T[halg[1]]
+    # Products generated so far, held in a set: the closure doubles in size with every new
+    # generator, so testing membership against a list would dominate the construction.
+    multstrings = Set{T}((halg[1],))
     i = 1
-    while halg ⊈ multstrings
+    while !all(in(multstrings), halg)
         for j in eachindex(halg)[i:end]
             i = j
             halg[j] ∈ multstrings || (push!(bstrings, halg[j]); break)
         end
-        for string in multstrings
+        for string in collect(multstrings)
             push!(multstrings, string ⊻ halg[i])
         end
         push!(multstrings, halg[i])
     end
-    return bstrings
+    return PauliList{T,Q}(bstrings, iscopy=false, check=false)
 end
 
 """
@@ -57,38 +60,38 @@ For each `b` in `bstrings` the returned vector contains the
 Pauli strings from `kstrings` that do not commute with `b` but commute with all the previous
 elements in `bstrings`.
 
+See also [`subalgred`](@ref), [`cleangenerators!`](@ref), [`reductive_optimizer`](@ref).
+
 # Examples
 ```jldoctest
-julia> ham = hamiltonian("TFIM", 4, [1, 1], UInt32)
-PauliSentence{UInt32, Complex{Int64}, 4} with 7 entries:
-  0x00000020 => -1+0im
-  0x00000040 => -1+0im
-  0x00000006 => -1+0im
-  0x00000010 => -1+0im
-  0x0000000c => -1+0im
-  0x00000003 => -1+0im
-  0x00000080 => -1+0im
+julia> ham = hamiltonian("TFIM", 4, [1, 1], UInt32);
 
-julia> d = involutionlessdecomp(PauliList(collect(keys(ham)), 4))
-Dict{Symbol, PauliList{UInt32, 4}} with 4 entries:
-  :m => ["-Z--", "--Z-", "-XX-", "Z---", "--XX", "XX--", "---Z"…
-  :k => ["--XY", "YX--", "XY--", "--YX", "-XY-", "-YX-", "-YZX"…
-  :h => ["-Z--", "--Z-", "Z---", "---Z"]
-  :g => ["-Z--", "--Z-", "-XX-", "Z---", "--XX", "XX--", "---Z"…
+julia> decomposition = involutionlessdecomp(PauliList(collect(keys(ham)), 4));
 
-julia> println(d[:k])
-["--XY", "YX--", "XY--", "--YX", "-XY-", "-YX-", "-YZX", "YZX-", "XZY-", "-XZY", "YZZX",
- "XZZY"]
+julia> tostring(decomposition.h)
+4-element Vector{String}:
+ "-Z--"
+ "--Z-"
+ "Z---"
+ "---Z"
 
-julia> println(d[:h])
-["-Z--", "--Z-", "Z---", "---Z"]
+julia> fragments = fragmentedsubspaces(decomposition.k, decomposition.h);
 
-julia> fragmentedsubspaces(d[:k], d[:h])
-4-element Vector{PauliList{UInt32, 4}}:
- ["YX--", "XY--", "-XY-", "-YX-", "-YZX", "-XZY"]
- ["--XY", "--YX", "YZX-", "XZY-"]
- ["YZZX", "XZZY"]
- 0-element PauliList{UInt32, 4}
+julia> length.(fragments)
+4-element Vector{Int64}:
+ 6
+ 4
+ 2
+ 0
+
+julia> tostring(fragments[1])       # the k elements that move the first Z
+6-element Vector{String}:
+ "YX--"
+ "XY--"
+ "-XY-"
+ "-YX-"
+ "-YZX"
+ "-XZY"
 ```
 """
 function fragmentedsubspaces(
@@ -96,23 +99,61 @@ function fragmentedsubspaces(
     bstrings::PauliList{<:Unsigned,Q},
 ) where {T,Q}
 
-    strings = copy(kstrings)
+    strings = copy(kstrings.strings)
     symstrings = Vector{PauliList{T,Q}}(undef, length(bstrings))
     for i in eachindex(bstrings)
-        temp = PauliList{T,Q}(undef, 0)
-        j = 1
-        while j <= length(strings)
-            if com(strings[j], bstrings[i], Q).second
-                j += 1
+        # Splitting into two fresh vectors keeps this linear: deleting the matches from
+        # `strings` one at a time shifts the tail on every hit.
+        anticommuting = T[]
+        remaining = T[]
+        for string in strings
+            if com(string, bstrings[i], Q).second
+                push!(remaining, string)
             else
-                push!(temp, popat!(strings, j))
+                push!(anticommuting, string)
             end
         end
-        symstrings[i] = temp
+        symstrings[i] = PauliList{T,Q}(anticommuting, iscopy=false, check=false)
+        strings = remaining
     end
     return symstrings
 end
 
+"""
+    cleangenerators!(symgenerators::AbstractVector{<:PauliList}, bstrings::PauliList)
+
+Drop the empty fragments from `symgenerators`, together with the elements of `bstrings` they
+belong to.
+
+A Cartan generator with no ``\\mathfrak{k}`` elements acting on it contributes nothing to the
+optimization, and [`reductive_optimizer`](@ref) expects the two arguments to line up, so
+both are shortened in place.
+
+See also [`fragmentedsubspaces`](@ref).
+
+# Examples
+```jldoctest
+julia> ham = hamiltonian("TFIM", 4, [1, 1], UInt32);
+
+julia> decomposition = involutionlessdecomp(PauliList(collect(keys(ham)), 4));
+
+julia> bstrings = subalgred(decomposition.h);
+
+julia> fragments = fragmentedsubspaces(decomposition.k, bstrings);
+
+julia> length.(fragments)
+4-element Vector{Int64}:
+ 6
+ 4
+ 2
+ 0
+
+julia> cleangenerators!(fragments, bstrings);
+
+julia> length.(fragments), length(bstrings)
+([6, 4, 2], 3)
+```
+"""
 function cleangenerators!(symgenerators::AbstractVector{<:PauliList}, bstrings::PauliList)
     inds = findall(x -> length(x) == 0, symgenerators)
     deleteat!(symgenerators, inds)

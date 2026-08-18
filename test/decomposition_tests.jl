@@ -19,7 +19,7 @@ end
     sub = RedCarD.subalgfind(paulis)
     # sub should be abelian: all pairs commute
     for i in eachindex(sub)
-        for j in i+1:length(sub)
+        for j in (i+1):length(sub)
             @test RedCarD.com(sub[i], sub[j], sub.qubits).second
         end
     end
@@ -30,7 +30,7 @@ end
     append!(paulis, RedCarD.generatez(2, UInt))
 
     comp = RedCarD.cartandecomp(paulis, RedCarD.evenoddx)
-    @test isa(comp, Dict)
+    @test isa(comp, NamedTuple)
     k = comp[:k]
     m = comp[:m]
     h = comp[:h]
@@ -51,7 +51,7 @@ end
 
     # h should be abelian
     for i in eachindex(h)
-        for j in i+1:length(h)
+        for j in (i+1):length(h)
             @test RedCarD.com(h[i], h[j], h.qubits).second
         end
     end

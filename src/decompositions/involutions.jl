@@ -17,14 +17,14 @@ Type I or II involution. Find if ``-qp^{T}q = ± p``.
 """
 function typeIorII end
 
-function typeIorII(paulis::PauliList, string::Unsigned)
-    _check_string_length(string, paulis.qubits)
+function typeIorII(paulis::PauliList{<:Unsigned,Q}, string::Unsigned) where {Q}
+    _check_string_length(string, Q)
     result = Vector{Bool}(undef, length(paulis))
     for (i, pauli) in enumerate(paulis)
-        if com(pauli, string, paulis.qubits).second
-            (result[i] = isodd(county(pauli, paulis.qubits)))
+        if com(pauli, string, Q).second
+            (result[i] = isodd(county(pauli, Q)))
         else
-            (result[i] = iseven(county(pauli, paulis.qubits)))
+            (result[i] = iseven(county(pauli, Q)))
         end
     end
     return result
@@ -39,10 +39,10 @@ Type III involution. Find if ``qpq = ± p``.
 """
 function typeIII end
 
-function typeIII(paulis::PauliList, string::Unsigned)
+function typeIII(paulis::PauliList{<:Unsigned,Q}, string::Unsigned) where {Q}
     result = Vector{Bool}(undef, length(paulis))
     for (i, pauli) in enumerate(paulis)
-        com(pauli, string, paulis.qubits).second ? (result[i] = 1) : (result[i] = 0)
+        com(pauli, string, Q).second ? (result[i] = 1) : (result[i] = 0)
     end
     return result
 end

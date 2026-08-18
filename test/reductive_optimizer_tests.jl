@@ -26,7 +26,7 @@ using RedCarD
                 itertrack=true,
             )
         end
-        @test isa(res, Dict)
+        @test isa(res, NamedTuple)
         @test haskey(res, :H)
         @test haskey(res, :angles)
         @test haskey(res, :error)

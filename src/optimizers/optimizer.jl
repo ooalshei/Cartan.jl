@@ -27,35 +27,58 @@ function cost(
     return result
 end
 
-@inline function _cost!(
-    ret::AbstractVector{<:Real},
-    generator::UPauli,
-    partialelem::PauliSentence,
-    partialham::PauliSentence;
-    atol::Real,
-)
+@doc raw"""
+    _costcoeffs(subalgelem, generator, ham)
 
-    @inbounds Threads.@threads for i in 0:2
-        ret[i+1] = cost(partialelem, generator, i * pi / 4, partialham, atol=atol)
+Coefficients ``(c_1, c_2)`` of the single-generator cost
+``\langle H, e^{-i\theta g} A e^{i\theta g}\rangle = c_0 + c_1\cos 2\theta + c_2\sin 2\theta``
+for the Cartan element `A = subalgelem` and the generator `g = generator`.
+
+Rotating about one generator only mixes each Pauli `P` with its partner `g ⊻ P`, so both
+coefficients follow from a single sweep over `ham`; the constant `c_0` never enters
+[`_minanglefind`](@ref) and is not accumulated.
+"""
+function _costcoeffs(
+    subalgelem::PauliSentence,
+    generator::UPauli{<:Unsigned,Q},
+    ham::PauliSentence{<:Unsigned,<:Number,Q},
+) where {Q}
+
+    g = generator.string
+    modsine = _ipow(county(g, Q) + 1)
+    c1 = zero(ComplexF64)
+    c2 = zero(ComplexF64)
+    for (key, value) in ham
+        product = com(g, key, Q)
+        product.second && continue  # untouched by the rotation: contributes to c₀ only
+        weight = isodd(county(key, Q)) ? -value : value
+        c1 += weight * get(subalgelem, key, zero(ComplexF64))
+        c2 +=
+            weight *
+            modsine *
+            _prodsign(g, product.first, Q) *
+            get(subalgelem, product.first, zero(ComplexF64))
     end
-    nothing
+    return real(c1), real(c2)
 end
+
+# Minimum of c₀ + c₁cos(2θ) + c₂sin(2θ). Equivalent to `_minanglefind` on the three samples
+# θ = 0, π/4, π/2, which are exactly (c₀+c₁, c₀+c₂, c₀-c₁).
+_minanglefind(c1::Real, c2::Real)::Float64 = 0.5 * atan(c2, c1) + pi / 2
 
 function _serial_rotostep!(
     angles::AbstractVector{<:Real},
-    points::AbstractVector{<:Real},
     partialelem::PauliSentence,
-    ham::PauliSentence,
-    generators::PauliList;
+    ham::PauliSentence{<:Unsigned,<:Number,Q},
+    generators::PauliList{T,Q};
     atol::Real,
-)
+) where {T,Q}
 
     partialham = ham
     @inbounds for i in eachindex(angles)
-        pauligen = UPauli(generators[i], ham.qubits)
+        pauligen = UPauli{T,Q}(generators[i])
         ad!(partialelem, pauligen, -angles[i], atol=atol)
-        _cost!(points, pauligen, partialelem, partialham, atol=atol)
-        angles[i] = _minanglefind(points)
+        angles[i] = _minanglefind(_costcoeffs(partialelem, pauligen, partialham)...)
         ad!(partialham, pauligen, -angles[i], atol=atol)
     end
     return partialham
@@ -63,41 +86,59 @@ end
 
 function _parallel_rotostep!(
     angles::AbstractVector{<:Real},
-    points::AbstractVector{<:Real},
     partialelem::PauliSentence,
-    ham::PauliSentence,
-    generators::PauliList;
+    ham::PauliSentence{<:Unsigned,<:Number,Q},
+    generators::PauliList{T,Q};
     atol::Real,
-)
+) where {T,Q}
 
     task = ham
     @inbounds for i in eachindex(angles)
-        pauligen = UPauli(generators[i], ham.qubits)
+        pauligen = UPauli{T,Q}(generators[i])
         ad!(partialelem, pauligen, -angles[i], atol=atol)
         partialham = fetch(task)
-        _cost!(points, pauligen, partialelem, partialham, atol=atol)
-        angles[i] = _minanglefind(points)
+        angles[i] = _minanglefind(_costcoeffs(partialelem, pauligen, partialham)...)
         task = Threads.@spawn ad!(partialham, pauligen, -angles[i], atol=atol)
     end
     return fetch(task)
 end
 
-const _rotostep! = Threads.nthreads() == 1 ? _serial_rotostep! : _parallel_rotostep!
+# Resolved on every call: the number of threads is a property of the running session, not of
+# the session that precompiled the package.
+_rotostep!(args...; kwargs...) = if isone(Threads.nthreads())
+    _serial_rotostep!(args...; kwargs...)
+else
+    _parallel_rotostep!(args...; kwargs...)
+end
 
-function errorfind!(ham::PauliSentence, subalgebra::PauliList)::Float64
+"""
+    _commutes(key, subalgebra, Q)
+
+Whether the Pauli `key` commutes with every element of `subalgebra`, i.e. whether it lies in
+the centralizer the optimization rotates the Hamiltonian into.
+"""
+_commutes(key::Unsigned, subalgebra::PauliList, Q::Integer) =
+    all(h -> com(h, key, Q).second, subalgebra)
+
+"""
+    errorfind!(ham::PauliSentence, subalgebra::PauliList)
+
+Delete from `ham` every term that does not commute with all of `subalgebra`, and return the
+squared relative Hilbert-Schmidt weight of what was deleted.
+"""
+function errorfind!(
+    ham::PauliSentence{<:Unsigned,<:Number,Q},
+    subalgebra::PauliList,
+)::Float64 where {Q}
     errornorm = 0.0
     fullnorm = 0.0
-    for (key, value) in ham
-        fullnorm += abs2(value)
-        # unique!(com.(subalgebra, key, ham.qubits)) == [0] ||
-        #     (errornorm += abs2(value); delete!(ham, key))
-        for h in subalgebra
-            if !com(h, key, ham.qubits).second
-                errornorm += abs2(value)
-                delete!(ham, key)
-                break
-            end
-        end
+    # `filter!` deletes in one pass and, unlike deleting while iterating, is defined
+    # behaviour for the underlying dictionary.
+    filter!(ham) do (key, value)
+        weight = abs2(value)
+        fullnorm += weight
+        _commutes(key, subalgebra, Q) || (errornorm += weight; return false)
+        return true
     end
     return errornorm / fullnorm
 end
@@ -154,17 +195,18 @@ function optimizer(
 )
 
     length(initangles) == length(generators) || throw(
-        ArgumentError(
-            "Incorrect number of initial angles. Expected $(length(generators)),
-            got $(length(initangles)).",
-        ),
+        ArgumentError("Incorrect number of initial angles. Expected $(length(generators)),
+                      got $(length(initangles))."),
     )
 
     irr = _mutirr(length(subalgebra))
     subalgelem = PauliSentence(subalgebra, (im) .^ county.(subalgebra, ham.qubits) .* irr)
+    # Converted once: every sweep starts from a fresh copy of the Hamiltonian, and copying a
+    # dictionary that already holds the right element type is a bulk copy rather than a
+    # rehash of every term.
+    complexham = PauliSentence{keytype(ham),ComplexF64}(ham)
     if method == :roto
         angles = copy(initangles)
-        points = Vector{Float64}(undef, 3)
         # errorcache = 1.0
 
         iter = 0
@@ -173,15 +215,8 @@ function optimizer(
             iter += 1
             # println("Begin iteration $iter...")
             partialelem = ad(subalgelem, generators, angles, atol=coeff_tol)
-            transformedham = PauliSentence{keytype(ham),ComplexF64}(ham)
-            _rotostep!(
-                angles,
-                points,
-                partialelem,
-                transformedham,
-                generators,
-                atol=coeff_tol,
-            )
+            transformedham = copy(complexham)
+            _rotostep!(angles, partialelem, transformedham, generators, atol=coeff_tol)
             if (iter % 10 == 0) | (iter == maxiter)
                 if toltype == :relerror
                     relerror = errorfind!(transformedham, subalgebra)
@@ -195,50 +230,54 @@ function optimizer(
 
                         if itertrack
                             if timetrack
-                                return Dict(
-                                    :H => transformedham,
-                                    :angles => angles,
-                                    :error => sqrt(relerror),
-                                    :iterations => iter,
-                                    :calls => 3 * iter * length(angles),
-                                    :time => time() - t,
+                                return (
+                                    H=transformedham,
+                                    generators=generators,
+                                    angles=angles,
+                                    error=sqrt(relerror),
+                                    iterations=iter,
+                                    calls=3 * iter * length(angles),
+                                    time=time() - t,
                                 )
                             else
-                                return Dict(
-                                    :H => transformedham,
-                                    :angles => angles,
-                                    :error => sqrt(relerror),
-                                    :iterations => iter,
-                                    :calls => 3 * iter * length(angles),
+                                return (
+                                    H=transformedham,
+                                    generators=generators,
+                                    angles=angles,
+                                    error=sqrt(relerror),
+                                    iterations=iter,
+                                    calls=3 * iter * length(angles),
                                 )
                             end
 
                         else
                             if timetrack
-                                return Dict(
-                                    :H => transformedham,
-                                    :angles => angles,
-                                    :error => sqrt(relerror),
-                                    :time => time() - t,
+                                return (
+                                    H=transformedham,
+                                    generators=generators,
+                                    angles=angles,
+                                    error=sqrt(relerror),
+                                    time=time() - t,
                                 )
                             else
-                                return Dict(
-                                    :H => transformedham,
-                                    :angles => angles,
-                                    :error => sqrt(relerror),
+                                return (
+                                    H=transformedham,
+                                    generators=generators,
+                                    angles=angles,
+                                    error=sqrt(relerror),
                                 )
                             end
                         end
 
-                    # elseif (sqrt(errorcache) - sqrt(relerror)) <= 0
-                    #     println("Relative error after $iter iterations: $(sqrt(relerror))")
-                    #     println("Convergence too slow. Starting over.")
-                    #     println()
-                    #     iter = 0
-                    #     angles = pi * rand(length(generators))
-                    #     t = time()
-                    #     errorcache = 1.0
-                    # angles +=  convergence_tol * randn(size(angles))
+                        # elseif (sqrt(errorcache) - sqrt(relerror)) <= 0
+                        #     println("Relative error after $iter iterations: $(sqrt(relerror))")
+                        #     println("Convergence too slow. Starting over.")
+                        #     println()
+                        #     iter = 0
+                        #     angles = pi * rand(length(generators))
+                        #     t = time()
+                        #     errorcache = 1.0
+                        # angles +=  convergence_tol * randn(size(angles))
 
                     else
                         # errorcache = relerror

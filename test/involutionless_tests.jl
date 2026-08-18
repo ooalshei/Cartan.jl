@@ -6,7 +6,7 @@ using RedCarD
     append!(paulis, RedCarD.generatez(1, UInt))
 
     comp = RedCarD.involutionlessdecomp(paulis)
-    @test isa(comp, Dict)
+    @test isa(comp, NamedTuple)
 
     g = comp[:g]
     h = comp[:h]

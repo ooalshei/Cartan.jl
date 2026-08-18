@@ -1,27 +1,25 @@
-function errorfind(ham::PauliSentence, subalgebra::PauliList)::Float64
+"""
+    errorfind(ham::PauliSentence, subalgebra::PauliList)
+
+Squared relative Hilbert-Schmidt weight of the part of `ham` that does not commute with all
+of `subalgebra`. Unlike [`errorfind!`](@ref), `ham` is left untouched.
+"""
+function errorfind(
+    ham::PauliSentence{<:Unsigned,<:Number,Q},
+    subalgebra::PauliList,
+)::Float64 where {Q}
     errornorm = 0.0
     fullnorm = 0.0
     for (key, value) in ham
-        fullnorm += abs2(value)
-        for h in subalgebra
-            com(h, key, ham.qubits).second || (errornorm += abs2(value); break)
-        end
+        weight = abs2(value)
+        fullnorm += weight
+        _commutes(key, subalgebra, Q) || (errornorm += weight)
     end
     return errornorm / fullnorm
 end
 
-function _filter(ham::PauliSentence, subalgebra::PauliList)
-    filteredham = copy(ham)
-    for key in keys(ham)
-        for h in subalgebra
-            if !com(h, key, ham.qubits).second
-                delete!(filteredham, key)
-                break
-            end
-        end
-    end
-    return filteredham
-end
+_filter(ham::PauliSentence{<:Unsigned,<:Number,Q}, subalgebra::PauliList) where {Q} =
+    filter(p -> _commutes(p.first, subalgebra, Q), ham)
 
 function _reductive_optimizer_step(
     ham::PauliSentence,
@@ -39,18 +37,18 @@ function _reductive_optimizer_step(
 )
 
     length(angles) == length(generators) || throw(
-        ArgumentError(
-            "Incorrect number of initial angles. Expected $(length(generators)),
-            got $(length(angles)).",
-        ),
+        ArgumentError("Incorrect number of initial angles. Expected $(length(generators)),
+                      got $(length(angles))."),
     )
 
     subalgelem = PauliSentence(
-        Dict{keytype(ham),Float64}(bstrings[end] => im^county(bstrings[end], ham.qubits)),
+        Dict{keytype(ham),ComplexF64}(
+            bstrings[end] => im^county(bstrings[end], ham.qubits),
+        ),
         ham.qubits,
     )
+    complexham = PauliSentence{keytype(ham),ComplexF64}(ham)
     if method == :roto
-        points = Vector{Float64}(undef, 3)
         # errorcache = 1.0
 
         iter = 0
@@ -59,15 +57,8 @@ function _reductive_optimizer_step(
             iter += 1
             # println("Begin iteration $iter...")
             partialelem = ad(subalgelem, generators, angles, atol=coeff_tol)
-            transformedham = PauliSentence{keytype(ham),ComplexF64}(ham)
-            _rotostep!(
-                angles,
-                points,
-                partialelem,
-                transformedham,
-                generators,
-                atol=coeff_tol,
-            )
+            transformedham = copy(complexham)
+            _rotostep!(angles, partialelem, transformedham, generators, atol=coeff_tol)
             if (iter % 10 == 0) | (iter == maxiter)
                 if toltype == :relerror
                     transformedham = ad(
@@ -87,41 +78,48 @@ function _reductive_optimizer_step(
 
                         if itertrack
                             if timetrack
-                                return Dict(
-                                    :H => transformedham,
-                                    :angles => angles,
-                                    :iterations => iter,
-                                    :calls => 3 * iter * length(angles),
-                                    :time => time() - t,
+                                return (
+                                    H=transformedham,
+                                    generators=generators,
+                                    angles=angles,
+                                    iterations=iter,
+                                    calls=3 * iter * length(angles),
+                                    time=time() - t,
                                 )
                             else
-                                return Dict(
-                                    :H => transformedham,
-                                    :angles => angles,
-                                    :iterations => iter,
-                                    :calls => 3 * iter * length(angles),
+                                return (
+                                    H=transformedham,
+                                    generators=generators,
+                                    angles=angles,
+                                    iterations=iter,
+                                    calls=3 * iter * length(angles),
                                 )
                             end
                         else
                             if timetrack
-                                return Dict(
-                                    :H => transformedham,
-                                    :angles => angles,
-                                    :time => time() - t,
+                                return (
+                                    H=transformedham,
+                                    generators=generators,
+                                    angles=angles,
+                                    time=time() - t,
                                 )
                             else
-                                return Dict(:H => transformedham, :angles => angles)
+                                return (
+                                    H=transformedham,
+                                    generators=generators,
+                                    angles=angles,
+                                )
                             end
                         end
-                    # elseif (sqrt(errorcache) - sqrt(relerror)) <= 0
-                    #     println("Relative error after $iter iterations: $(sqrt(relerror))")
-                    #     println("Convergence too slow. Starting over.")
-                    #     println()
-                    #     iter = 0
-                    #     angles = pi * rand(length(generators))
-                    #     t = time()
-                    #     errorcache = 1.0
-                    # angles +=  convergence_tol * randn(size(angles))
+                        # elseif (sqrt(errorcache) - sqrt(relerror)) <= 0
+                        #     println("Relative error after $iter iterations: $(sqrt(relerror))")
+                        #     println("Convergence too slow. Starting over.")
+                        #     println()
+                        #     iter = 0
+                        #     angles = pi * rand(length(generators))
+                        #     t = time()
+                        #     errorcache = 1.0
+                        # angles +=  convergence_tol * randn(size(angles))
 
                     else
                         # errorcache = relerror
@@ -221,14 +219,14 @@ function reductive_optimizer(
             timetrack=timetrack,
         )
         println()
-        previous_ham = opt[:H]
-        stepham = _filter(opt[:H], bstrings[1:i])
-        angles[i] = opt[:angles]
+        previous_ham = opt.H
+        stepham = _filter(opt.H, bstrings[1:i])
+        angles[i] = opt.angles
         if itertrack
-            iter += opt[:iterations]
-            calls += opt[:calls]
+            iter += opt.iterations
+            calls += opt.calls
         end
-        timetrack && (t += opt[:time])
+        timetrack && (t += opt.time)
     end
     finalham = ad(
         ham,
@@ -242,33 +240,41 @@ function reductive_optimizer(
     println("Optimization complete. Combined relative error: $(sqrt(relerror))")
     if itertrack
         if timetrack
-            return Dict(
-                :H => finalham,
-                :angles => angles,
-                :error => sqrt(relerror),
-                :iterations => iter,
-                :calls => calls,
-                :time => t,
+            return (
+                H=finalham,
+                generators=symgenerators,
+                angles=angles,
+                error=sqrt(relerror),
+                iterations=iter,
+                calls=calls,
+                time=t,
             )
         else
-            return Dict(
-                :H => finalham,
-                :angles => angles,
-                :error => sqrt(relerror),
-                :iterations => iter,
-                :calls => calls,
+            return (
+                H=finalham,
+                generators=symgenerators,
+                angles=angles,
+                error=sqrt(relerror),
+                iterations=iter,
+                calls=calls,
             )
         end
     else
         if timetrack
-            return Dict(
-                :H => finalham,
-                :angles => angles,
-                :error => sqrt(relerror),
-                :time => t,
+            return (
+                H=finalham,
+                generators=symgenerators,
+                angles=angles,
+                error=sqrt(relerror),
+                time=t,
             )
         else
-            return Dict(:H => finalham, :angles => angles, :error => sqrt(relerror))
+            return (
+                H=finalham,
+                generators=symgenerators,
+                angles=angles,
+                error=sqrt(relerror),
+            )
         end
     end
 end

@@ -10,7 +10,7 @@ end
 
 function generatez(n::Integer, ::Type{T}=UInt) where {T<:Unsigned}
     result = PauliList{T,n}(zeros(T, n))
-    number = T(exp2(n))
+    number = T(1) << n
     for i in 1:n
         result[i] = number
         number <<= 1
@@ -20,7 +20,7 @@ end
 
 function generatey(n::Integer, ::Type{T}=UInt) where {T<:Unsigned}
     result = PauliList{T,n}(zeros(T, n))
-    number = T(exp2(n) + 1)
+    number = (T(1) << n) | T(1)
     for i in 1:n
         result[i] = number
         number <<= 1
@@ -31,55 +31,56 @@ end
 function generatexx(n::Integer, ::Type{T}=UInt; pbc::Bool=false) where {T<:Unsigned}
     result = PauliList{T,n}(zeros(T, n - 1))
     number = T(3)
-    for i in 1:n-1
+    for i in 1:(n-1)
         result[i] = number
         number <<= 1
     end
-    pbc && return push!(result, exp2(n - 1) + 1)
+    pbc && return push!(result, (T(1) << (n - 1)) | T(1))
     return result
 end
 
 function generatezz(n::Integer, ::Type{T}=UInt; pbc::Bool=false) where {T<:Unsigned}
     result = PauliList{T,n}(zeros(T, n - 1))
-    number = T(exp2(n + 1) + exp2(n))
-    for i in 1:n-1
+    number = (T(1) << (n + 1)) | (T(1) << n)
+    for i in 1:(n-1)
         result[i] = number
         number <<= 1
     end
-    pbc && return push!(result, exp2(2 * n - 1) + exp2(n))
+    pbc && return push!(result, (T(1) << (2 * n - 1)) | (T(1) << n))
     return result
 end
 
 function generateyy(n::Integer, ::Type{T}=UInt; pbc::Bool=false) where {T<:Unsigned}
     result = PauliList{T,n}(zeros(T, n - 1))
-    number = T(exp2(n + 1) + exp2(n) + 3)
-    for i in 1:n-1
+    number = (T(1) << (n + 1)) | (T(1) << n) | T(3)
+    for i in 1:(n-1)
         result[i] = number
         number <<= 1
     end
-    pbc && return push!(result, exp2(2 * n - 1) + exp2(n) + exp2(n - 1) + 1)
+    pbc &&
+        return push!(result, (T(1) << (2 * n - 1)) | (T(1) << n) | (T(1) << (n - 1)) | T(1))
     return result
 end
 
 function generatexy(n::Integer, ::Type{T}=UInt; pbc::Bool=false) where {T<:Unsigned}
     result = PauliList{T,n}(zeros(T, n - 1))
-    number = T(exp2(n) + 3)
-    for i in 1:n-1
+    number = (T(1) << n) | T(3)
+    for i in 1:(n-1)
         result[i] = number
         number <<= 1
     end
-    pbc && return push!(result, exp2(2 * n - 1) + exp2(n - 1) + 1)
+    pbc && return push!(result, (T(1) << (2 * n - 1)) | (T(1) << (n - 1)) | T(1))
     return result
 end
 
 function generateyx(n::Integer, ::Type{T}=UInt; pbc::Bool=false) where {T<:Unsigned}
     result = PauliList{T,n}(zeros(T, n - 1))
-    number = T(exp2(n + 1) + 3)
-    for i in 1:n-1
+    number = (T(1) << (n + 1)) | T(3)
+    for i in 1:(n-1)
         result[i] = number
         number <<= 1
     end
-    pbc && return push!(result, exp2(n) + exp2(n - 1) + 1)
+    pbc && return push!(result, (T(1) << n) | (T(1) << (n - 1)) | T(1))
     return result
 end
 
@@ -128,7 +129,7 @@ function hamiltonian(
         else
             strings = append!(generatexx(n, T, pbc=pbc), generatez(n, T))
             coefficients = fill(-couplings[1], length(strings))
-            coefficients[end-n+1:end] *= couplings[2]
+            coefficients[(end-n+1):end] *= couplings[2]
         end
 
     elseif uppercase(model) == "TFXY"
@@ -142,7 +143,7 @@ function hamiltonian(
                 generatez(n, T),
             )
             coefficients = fill(-couplings[1], length(strings))
-            coefficients[end-n+1:end] *= couplings[2]
+            coefficients[(end-n+1):end] *= couplings[2]
         end
 
     elseif uppercase(model) == "MFIM"
@@ -154,8 +155,8 @@ function hamiltonian(
         else
             strings = append!(generatexx(n, T, pbc=pbc), generatez(n, T), generatex(n, T))
             coefficients = fill(-couplings[1], length(strings))
-            coefficients[end-2*n+1:end-n] *= couplings[2]
-            coefficients[end-n+1:end] *= couplings[3]
+            coefficients[(end-2*n+1):(end-n)] *= couplings[2]
+            coefficients[(end-n+1):end] *= couplings[3]
         end
 
     elseif uppercase(model) == "HIM"
@@ -167,7 +168,7 @@ function hamiltonian(
             coefficients = fill(-couplings[1], length(strings))
             η = [cosh(-couplings[4] + i * 2 * couplings[4] / (n - 1)) for i in 1:n]  # η_i
             x = pbc ? n : n - 1
-            for i in 1:n-1
+            for i in 1:(n-1)
                 coefficients[i] *= (η[i] + η[i+1] / 2)  # XX couplings
                 coefficients[i+x] *= couplings[2] * η[i]  # Z couplings
                 coefficients[i+x+n] *= couplings[3] * η[i]  # X couplings
@@ -198,7 +199,7 @@ function hamiltonian(
             generatezz(n, T, pbc=pbc),
         )
         coefficients = fill(-couplings[1], length(strings))
-        coefficients[2*length(strings)÷3+1:end] *= couplings[2]
+        coefficients[(2*length(strings)÷3+1):end] *= couplings[2]
 
     elseif uppercase(model) == "XXZ_EXT"
         length(couplings) == 3 ||
@@ -211,8 +212,8 @@ function hamiltonian(
             generatez(n, T),
         )
         coefficients = fill(-couplings[1], length(strings))
-        coefficients[2*(length(strings)-n)÷3+1:end-n] *= couplings[2]
-        coefficients[end-n+1:end] .= couplings[3]
+        coefficients[(2*(length(strings)-n)÷3+1):(end-n)] *= couplings[2]
+        coefficients[(end-n+1):end] .= couplings[3]
 
     elseif uppercase(model) == "GN"
         length(couplings) == 3 || throw(
@@ -225,21 +226,27 @@ function hamiltonian(
         strings = generateyx(nf * n, T)
         setdiff!(
             strings,
-            T[exp2(i * n - 1) + exp2(i * n) + exp2(i * n + n * nf) for i in 1:nf-1],
+            T[
+                (T(1) << (i * n - 1)) | (T(1) << (i * n)) | (T(1) << (i * n + n * nf)) for
+                i in 1:(nf-1)
+            ],
         )
         temp = generatexy(nf * n, T)
         setdiff!(
             temp,
-            T[exp2(i * n - 1) + exp2(i * n) + exp2(i * n + n * nf - 1) for i in 1:nf-1],
+            T[
+                (T(1) << (i * n - 1)) | (T(1) << (i * n)) | (T(1) << (i * n + n * nf - 1))
+                for i in 1:(nf-1)
+            ],
         )
         append!(strings, temp)
         temp = generatez(nf * n, T)
         append!(strings, temp)
-        temp .&= (T(exp2(nf * n + n) - 1))
+        temp .&= (T(1) << (nf * n + n)) - T(1)
         setdiff!(temp, [0])
-        for i in 0:nf-1
+        for i in 0:(nf-1)
             temp2 = temp .<< (i * n)
-            for j in 1:nf-i-1
+            for j in 1:(nf-i-1)
                 append!(strings, temp2 .| (temp2 .<< (j * n)))
             end
         end

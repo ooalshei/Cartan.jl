@@ -1,16 +1,103 @@
+"""
+    _minchunk
+
+Number of commutators below which a closure sweep is not worth handing to other threads.
+"""
+const _minchunk = 512
+
 function _dla(string::Unsigned, iter, Q::Integer)
     strings = com.(string, iter, Q)
     return filter!(x -> !x.second, strings) .|> (x -> x.first)
 end
 
-function serial_dla(paulis::PauliList)
-    finalind = length(paulis)
-    initialind = 1
-    algebra = copy(paulis)
+"""
+    _maxbitmap
+
+Base-2 logarithm of the largest dense membership bitmap a closure may allocate. A symplectic
+string on `Q` qubits indexes a bitmap of `4^Q` bits directly, which is both smaller and
+faster than a hash set as long as it stays this side of the cache (`2^24` bits is 2 MiB);
+past that a `Set` takes over.
+"""
+const _maxbitmap = 24
+
+_newmembers(::Type{T}, Q::Integer) where {T<:Unsigned} =
+    2 * Q <= _maxbitmap ? falses(1 << (2 * Q)) : Set{T}()
+
+# A string on `Q` qubits occupies exactly `2Q` bits and the bitmap holds `4^Q` of them, so
+# every string indexes it — an invariant the `PauliList` constructor is what enforces, and
+# one that commutators (a `⊻` of two valid strings) cannot break.
+@inline _isknown(members::BitVector, string::Unsigned) = @inbounds members[Int(string)+1]
+@inline _isknown(members::AbstractSet, string::Unsigned) = string in members
+@inline _remember!(members::BitVector, string::Unsigned) =
+    @inbounds members[Int(string)+1] = true
+@inline _remember!(members::AbstractSet, string::Unsigned) = push!(members, string)
+
+"""
+    _newalgebra(paulis)
+
+Start a closure from `paulis`, returning the (deduplicated) algebra together with a record of
+its members.
+
+Membership is tracked alongside the list because `union!` on a plain vector rehashes the
+whole accumulated algebra on every call, which by itself makes a closure sweep quadratic in
+the dimension.
+"""
+function _newalgebra(paulis::PauliList{T,Q}) where {T,Q}
+    algebra = PauliList{T,Q}(undef, 0)
+    sizehint!(algebra, length(paulis))
+    members = _newmembers(T, Q)
+    for p in paulis
+        _isknown(members, p) || (_remember!(members, p); push!(algebra, p))
+    end
+    return algebra, members
+end
+
+"""
+    _grow!(algebra, members, string, indices)
+
+Append to `algebra` every commutator of `string` with `algebra[indices]` that is not already
+a member, in the order the indices are given.
+"""
+function _grow!(
+    algebra::PauliList{T,Q},
+    members,
+    string::Unsigned,
+    indices::AbstractRange,
+) where {T,Q}
+    strings = algebra.strings
+    for j in indices
+        # `push!` may reallocate the buffer, but never the vector itself, so indexing it
+        # while the algebra grows stays valid; `indices` only ever covers existing entries.
+        product = com(string, @inbounds(strings[j]), Q)
+        product.second && continue
+        newstring = T(product.first)
+        _isknown(members, newstring) && continue
+        _remember!(members, newstring)
+        push!(algebra, newstring)
+    end
+    return algebra
+end
+
+function _absorb!(algebra::PauliList{T,Q}, members, strings) where {T,Q}
+    for string in strings
+        newstring = T(string)
+        _isknown(members, newstring) && continue
+        _remember!(members, newstring)
+        push!(algebra, newstring)
+    end
+    return algebra
+end
+
+function _serial_dla(paulis::PauliList, startind::Integer=1)
+    algebra, members = _newalgebra(paulis)
+    return _serial_closure!(algebra, members, Int(startind))
+end
+
+function _serial_closure!(algebra::PauliList, members, initialind::Int)
+    finalind = length(algebra)
     while true
-        for i in eachindex(algebra)[end:-1:initialind]
-            newpaulis = _dla(algebra[i], view(algebra, 1:i-1), paulis.qubits)
-            union!(algebra, newpaulis)
+        for i in finalind:-1:initialind
+            _grow!(algebra, members, algebra[i], 1:(i-1))
         end
         finalind == length(algebra) && return algebra
         initialind = finalind + 1
@@ -18,18 +105,28 @@ function serial_dla(paulis::PauliList)
     end
 end
 
-function parallel_dla(paulis::PauliList)
-    finalind = length(paulis)
-    initialind = 1
-    algebra = copy(paulis)
+function _parallel_dla(paulis::PauliList, startind::Integer=1)
+    algebra, members = _newalgebra(paulis)
+    return _parallel_closure!(algebra, members, Int(startind))
+end
+
+function _parallel_closure!(algebra::PauliList{T,Q}, members, initialind::Int) where {T,Q}
+    finalind = length(algebra)
     while true
-        for i in eachindex(algebra)[end:-1:initialind]
-            iter = @view algebra[i-1:-1:1]
-            chunks = Iterators.partition(iter, max(1, length(iter) ÷ Threads.nthreads()))
-            tasks = map(chunks) do chunk
-                Threads.@spawn _dla(algebra[i], chunk, paulis.qubits)
+        for i in finalind:-1:initialind
+            if i - 1 < _minchunk
+                _grow!(algebra, members, algebra[i], (i-1):-1:1)
+            else
+                iter = @view algebra[(i-1):-1:1]
+                chunks =
+                    Iterators.partition(iter, max(1, length(iter) ÷ Threads.nthreads()))
+                tasks = map(chunks) do chunk
+                    Threads.@spawn _dla(algebra[i], chunk, Q)
+                end
+                for task in tasks
+                    _absorb!(algebra, members, fetch(task))
+                end
             end
-            union!(algebra, fetch.(tasks)...)
         end
         finalind == length(algebra) && return algebra
         initialind = finalind + 1
@@ -44,7 +141,8 @@ Compute the dynamical Lie algebra generated by `paulis`.
 
 Recursively compute commutators until closure is reached.
 """
-const dla = isone(Threads.nthreads()) ? serial_dla : parallel_dla
+const dla(paulis::PauliList) =
+    isone(Threads.nthreads()) ? _serial_dla(paulis, 1) : _parallel_dla(paulis, 1)
 
 """
     subalgfind(paulis::PauliList)
@@ -53,16 +151,13 @@ Find a maximal Abelian subalgebra (Cartan subalgebra) inside `paulis`. The routi
 sorts the input Pauli strings by increasing Pauli weight and greedily adds commuting
 elements to the subalgebra.
 """
-function subalgfind(paulis::PauliList)
-    sortedstrings = sort(paulis, by=x -> counti(x, paulis.qubits), rev=true)
-    subalgebra = sortedstrings[1:1]
-    for g in sortedstrings[2:end]
-        for h in subalgebra
-            com(g, h, paulis.qubits).second || break
-            h == subalgebra[end] && (push!(subalgebra, g); break)
-        end
+function subalgfind(paulis::PauliList{T,Q}) where {T,Q}
+    sortedstrings = sort(paulis.strings, by=x -> counti(x, Q), rev=true)
+    subalgebra = T[]
+    for g in sortedstrings
+        all(h -> com(g, h, Q).second, subalgebra) && push!(subalgebra, g)
     end
-    return PauliList(subalgebra, paulis.qubits, iscopy=false)
+    return PauliList{T,Q}(subalgebra, iscopy=false, check=false)
 end
 
 @doc raw"""
@@ -77,9 +172,9 @@ subalgebra ``\mathfrak{h} \subseteq \mathfrak{m}``.
 
 See also [`involutionlessdecomp`](@ref).
 """
-function cartandecomp(paulis::PauliList, involution::Function)
+function cartandecomp(paulis::PauliList{T,Q}, involution::Function) where {T,Q}
     inds = involution(paulis)
-    k = PauliList(paulis[inds], paulis.qubits, iscopy=false)
-    m = PauliList(paulis[.!inds], paulis.qubits, iscopy=false)
-    return Dict(:k => k, :m => m, :h => subalgfind(m))
+    k = PauliList{T,Q}(paulis.strings[inds], iscopy=false, check=false)
+    m = PauliList{T,Q}(paulis.strings[.!inds], iscopy=false, check=false)
+    return (k=k, m=m, h=subalgfind(m))
 end
