@@ -6,7 +6,6 @@ makedocs(
     sitename="RedCarD.jl",
     modules=[RedCarD],
     authors="Omar Alsheikh",
-    remotes=nothing,
     checkdocs=:exports,
     pages=[
         "Home" => "index.md",

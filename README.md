@@ -1,28 +1,30 @@
 # RedCarD.jl
 
-[![Build Status](https://github.com/ooalshei/Cartan.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/ooalshei/Cartan.jl/actions/workflows/CI.yml?query=branch%3Amain)
-[![Coverage](https://codecov.io/gh/ooalshei/Cartan.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/ooalshei/Cartan.jl)
-[![Coverage](https://coveralls.io/repos/github/ooalshei/Cartan.jl/badge.svg?branch=main)](https://coveralls.io/github/ooalshei/Cartan.jl?branch=main)
+[![Build Status](https://github.com/ooalshei/RedCarD.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/ooalshei/RedCarD.jl/actions/workflows/CI.yml?query=branch%3Amain)
+[![Coverage](https://codecov.io/gh/ooalshei/RedCarD.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/ooalshei/RedCarD.jl)
+[![Coverage](https://coveralls.io/repos/github/ooalshei/RedCarD.jl/badge.svg?branch=main)](https://coveralls.io/github/ooalshei/RedCarD.jl?branch=main)
+[![Docs stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://ooalshei.github.io/RedCarD.jl/stable)
+[![Docs dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://ooalshei.github.io/RedCarD.jl/dev)
 
 **Red**uctive **Car**tan **D**ecompositions of Pauli operator algebras — and the
 fixed-depth quantum circuits they produce.
 
-Simulating `exp(-iHt)` normally costs circuit depth that grows with `t`. When the Pauli
-operators in `H` close into a Lie algebra that admits a Cartan decomposition
-`g = k ⊕ m`, that trade disappears: writing
+Simulating $e^{-iHt}$ normally costs circuit depth that grows with $t$. When the Pauli
+operators in $H$ close into a Lie algebra that admits a Cartan decomposition
+$\mathfrak{g} = \mathfrak{k} \oplus \mathfrak{m}$, that trade disappears: writing
 
-```
-H = K h K†,    K = ∏ⱼ exp(i θⱼ kⱼ),    kⱼ ∈ k,    h ∈ h ⊆ m
-```
+$$
+H = K h K^\dagger, \quad K = \prod_j e^{i \theta_j k_j}, \quad ik_j \in \mathfrak{k}, \quad ih \in \mathfrak{h} \subseteq \mathfrak{m},
+$$
 
-with `h` a maximal commuting subalgebra gives
+with $\mathfrak{h}$ a maximal commuting subalgebra gives
 
-```
-exp(-iHt) = K exp(-iht) K†
-```
+$$
+e^{-iHt} = K e^{-iht} K^\dagger
+$$
 
-where `exp(-iht)` is a single layer of independent rotations. The depth is the same for
-`t = 1` as for `t = 10⁶`.
+where $e^{-iht}$ is a single layer of independent rotations. The depth is the same for
+$t = 1$ as for $t = 10^6$.
 
 RedCarD.jl builds that object: it constructs the algebra, splits it, finds the Cartan
 subalgebra, and solves for the angles.
@@ -34,7 +36,7 @@ Neither package is registered, so install the dependency first:
 ```julia
 using Pkg
 Pkg.add(url="https://github.com/ooalshei/SymplecticPauli.jl")
-Pkg.add(url="https://github.com/ooalshei/Cartan.jl")
+Pkg.add(url="https://github.com/ooalshei/RedCarD.jl")
 ```
 
 ## Example
@@ -58,8 +60,8 @@ Converged in 1230 iterations.
 Final relative error: 8.685465962697732e-9
 ```
 
-`result.H` is `h`, and `result.generators`/`result.angles` are the `kⱼ` and `θⱼ` that build
-`K`. Conjugating back reproduces the original Hamiltonian to the convergence tolerance:
+`result.H` is $h$, and `result.generators`/`result.angles` are the $k_j$ and $\theta_j$ that build
+$K$. Conjugating back reproduces the original Hamiltonian to the convergence tolerance:
 
 ```julia
 back = ad(result.H, decomposition.k, result.angles)
@@ -69,11 +71,11 @@ maximum(abs(get(back, p, 0.0im) - get(H, p, 0.0im)) for p in union(keys(H), keys
 
 ## The reductive algorithm
 
-`optimizer` varies all `|k|` angles against one scalar cost. Rotosolve is a local method, so
+`optimizer` varies all $\dim \mathfrak{k}$ angles against one scalar cost. Rotosolve is a local method, so
 past about four qubits that stalls. The reductive algorithm of the
 [paper](https://arxiv.org/abs/2512.06070) — the one this package is named for — takes the
 problem apart instead: a Hamiltonian that commutes with a *multiplicative generating set* of
-`h` commutes with all of it, and the elements of `k` split by which generator each one moves.
+$\mathfrak{h}$ commutes with all of it, and the elements of $\mathfrak{k}$ split by which generator each one moves.
 
 ```julia
 bstrings  = subalgred(decomposition.h)                      # h from a few generators
@@ -83,15 +85,15 @@ cleangenerators!(fragments, bstrings)
 result = reductive_optimizer(H, bstrings, fragments; convergence_tol=1e-8)
 ```
 
-Each stage rotates `H` into the centralizer of one more generator while varying only the
-fragment of `k` that acts on it. The stages are small and independent, and each one's cost is
+Each stage rotates $H$ into the centralizer of one more generator while varying only the
+fragment of $\mathfrak{k}$ that acts on it. The stages are small and independent, and each one's cost is
 the expectation of a *single* Pauli string — measurable on hardware, which is what makes the
 quantum-assisted version of the algorithm possible.
 
-TFIM at `J = 1`, `g = 0.5`, tolerance `1e-8`, best of three random starts, one-shot capped at
+TFIM at $J = 1$, $g = 0.5$, tolerance `1e-8`, best of three random starts, one-shot capped at
 20000 sweeps:
 
-| Qubits | dim g | \|k\| | one-shot sweeps | evals | time | error | reductive sweeps | evals | time | error |
+| Qubits | $\dim \mathfrak{g}$ | $\dim \mathfrak{k}$ | one-shot sweeps | evals | time | error | reductive sweeps | evals | time | error |
 |--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
 | 4 | 28 | 12 | 1780 | 64080 | 0.017 s | 9.1e-9 | 90 | 1320 | 0.0004 s | 1.0e-9 |
 | 6 | 66 | 30 | 20000 † | 1800000 | 0.81 s | 1.6e-2 | 240 | 5580 | 0.0022 s | 9.3e-9 |
@@ -100,7 +102,7 @@ TFIM at `J = 1`, `g = 0.5`, tolerance `1e-8`, best of three random starts, one-s
 
 † hit the cap without reaching the tolerance, from all three starts.
 
-Both routes give the same circuit depth — the fragments partition the same `k`. Only one of
+Both routes give the same circuit depth — the fragments partition the same $\mathfrak{k}$. Only one of
 them gets there past a handful of qubits.
 
 ## What is in the box
