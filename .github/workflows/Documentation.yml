@@ -4,6 +4,7 @@ on:
       - main # Triggers on pushes to main branch
     tags: ['*']
   pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
