@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Algebras and decompositions · RedCarD.jl</title><meta name="title" content="Algebras and decompositions · RedCarD.jl"/><meta property="og:title" content="Algebras and decompositions · RedCarD.jl"/><meta property="twitter:title" content="Algebras and decompositions · RedCarD.jl"/><meta name="description" content="Documentation for RedCarD.jl."/><meta property="og:description" content="Documentation for RedCarD.jl."/><meta property="twitter:description" content="Documentation for RedCarD.jl."/><meta property="og:url" content="https://ooalshei.github.io/RedCarD.jl/decompositions/"/><meta property="twitter:url" content="https://ooalshei.github.io/RedCarD.jl/decompositions/"/><link rel="canonical" href="https://ooalshei.github.io/RedCarD.jl/decompositions/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">RedCarD.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../tutorial/">Tutorial</a></li><li><span class="tocitem">Manual</span><ul><li class="is-active"><a class="tocitem" href>Algebras and decompositions</a><ul class="internal"><li><a class="tocitem" href="#Pauli-strings"><span>Pauli strings</span></a></li><li><a class="tocitem" href="#Building-Hamiltonians"><span>Building Hamiltonians</span></a></li><li><a class="tocitem" href="#Closing-the-algebra"><span>Closing the algebra</span></a></li><li><a class="tocitem" href="#Decomposition-by-involution"><span>Decomposition by involution</span></a></li><li><a class="tocitem" href="#Decomposition-without-an-involution"><span>Decomposition without an involution</span></a></li><li><a class="tocitem" href="#Reductive-decompositions"><span>Reductive decompositions</span></a></li></ul></li><li><a class="tocitem" href="../optimization/">Finding the circuit</a></li></ul></li><li><a class="tocitem" href="../api/">API reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Manual</a></li><li class="is-active"><a href>Algebras and decompositions</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Algebras and decompositions</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/ooalshei/RedCarD.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/ooalshei/RedCarD.jl/blob/main/docs/src/decompositions.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Algebras-and-decompositions"><a class="docs-heading-anchor" href="#Algebras-and-decompositions">Algebras and decompositions</a><a id="Algebras-and-decompositions-1"></a><a class="docs-heading-anchor-permalink" href="#Algebras-and-decompositions" title="Permalink"></a></h1><h2 id="Pauli-strings"><a class="docs-heading-anchor" href="#Pauli-strings">Pauli strings</a><a id="Pauli-strings-1"></a><a class="docs-heading-anchor-permalink" href="#Pauli-strings" title="Permalink"></a></h2><p>Everything here is a symplectic bit string: <code>2Q</code> bits per operator on <code>Q</code> qubits, the low half recording <code>X</code> support and the high half <code>Z</code> support, so a <code>Y</code> sets both bits of its qubit. Products are <code>⊻</code>, and whether two strings commute is one popcount.</p><p>Two containers carry them:</p><ul><li><code>PauliList</code> — an ordered list of strings, used for algebras and generator sets.</li><li><code>PauliSentence</code> — strings with coefficients, used for operators.</li></ul><pre><code class="language-julia-repl hljs">julia&gt; using RedCarD
+
+julia&gt; paulis = PauliList([&quot;XY-&quot;, &quot;-ZZ&quot;]);   # stored as bit strings
+
+julia&gt; tostring(paulis)                     # …and read back as text
+2-element Vector{String}:
+ &quot;XY-&quot;
+ &quot;-ZZ&quot;
+
+julia&gt; com(paulis[1], paulis[2], 3).second      # do they commute?
+false
+
+julia&gt; H = PauliSentence(paulis, [0.5, -1.0]);
+
+julia&gt; length(H)
+2</code></pre><h2 id="Building-Hamiltonians"><a class="docs-heading-anchor" href="#Building-Hamiltonians">Building Hamiltonians</a><a id="Building-Hamiltonians-1"></a><a class="docs-heading-anchor-permalink" href="#Building-Hamiltonians" title="Permalink"></a></h2><p><a href="../api/#RedCarD.hamiltonian"><code>hamiltonian</code></a> covers the usual spin chains, with open or periodic boundaries.</p><pre><code class="language-julia-repl hljs">julia&gt; length(hamiltonian(&quot;HEISENBERG&quot;, 4, [1.0]))         # 3 bonds × 3 terms
+9
+
+julia&gt; length(hamiltonian(&quot;HEISENBERG&quot;, 4, [1.0], pbc=true))
+12
+
+julia&gt; sort(collect(keys(tostring(hamiltonian(&quot;XXZ&quot;, 3, [1.0, 0.4])))))
+6-element Vector{String}:
+ &quot;-XX&quot;
+ &quot;-YY&quot;
+ &quot;-ZZ&quot;
+ &quot;XX-&quot;
+ &quot;YY-&quot;
+ &quot;ZZ-&quot;</code></pre><p>The narrower the integer type, the less memory and the faster the bit work; <code>UInt32</code> holds up to 16 qubits and is worth passing explicitly for large runs:</p><pre><code class="language-julia-repl hljs">julia&gt; H32 = hamiltonian(&quot;TFIM&quot;, 12, [1.0, 0.5], UInt32);
+
+julia&gt; keytype(H32)
+UInt32</code></pre><h2 id="Closing-the-algebra"><a class="docs-heading-anchor" href="#Closing-the-algebra">Closing the algebra</a><a id="Closing-the-algebra-1"></a><a class="docs-heading-anchor-permalink" href="#Closing-the-algebra" title="Permalink"></a></h2><p><a href="../api/#RedCarD.dla"><code>dla</code></a> takes commutators until nothing new appears.</p><pre><code class="language-julia-repl hljs">julia&gt; closure = dla(PauliList([&quot;X-&quot;, &quot;-X&quot;, &quot;Z-&quot;, &quot;-Z&quot;]));
+
+julia&gt; tostring(closure)
+6-element Vector{String}:
+ &quot;X-&quot;
+ &quot;-X&quot;
+ &quot;Z-&quot;
+ &quot;-Z&quot;
+ &quot;-Y&quot;
+ &quot;Y-&quot;</code></pre><p>The dimension of the closure decides whether any of this is worth doing: an algebra that grows to <span>$4^Q$</span> gives a circuit no shallower than the generic one. Check it before committing to a decomposition — closures are cheap compared to what follows.</p><h2 id="Decomposition-by-involution"><a class="docs-heading-anchor" href="#Decomposition-by-involution">Decomposition by involution</a><a id="Decomposition-by-involution-1"></a><a class="docs-heading-anchor-permalink" href="#Decomposition-by-involution" title="Permalink"></a></h2><p>A Cartan decomposition can be produced from an involution <span>$\theta$</span> — a map with <span>$\theta^2 = 1$</span> that respects the bracket — by taking <span>$\mathfrak{k}$</span> and <span>$\mathfrak{m}$</span> to be its <span>$+1$</span> and <span>$-1$</span> eigenspaces. <a href="../api/#RedCarD.cartandecomp"><code>cartandecomp</code></a> takes the involution as a function returning one boolean per element.</p><p>Three families are provided:</p><table><tr><th style="text-align: left">Involution</th><th style="text-align: left">Rule</th><th style="text-align: left">Functions</th></tr><tr><td style="text-align: left">Even-odd counting</td><td style="text-align: left">parity of the number of <code>X</code>/<code>Y</code>/<code>Z</code> factors</td><td style="text-align: left"><a href="../api/#RedCarD.evenoddx"><code>evenoddx</code></a>, <a href="../api/#RedCarD.evenoddy"><code>evenoddy</code></a>, <a href="../api/#RedCarD.evenoddz"><code>evenoddz</code></a></td></tr><tr><td style="text-align: left">Type I/II</td><td style="text-align: left"><span>$-q p^{\mathsf T} q = \pm p$</span> for a fixed string <code>q</code></td><td style="text-align: left"><a href="../api/#RedCarD.typeIorII"><code>typeIorII</code></a></td></tr><tr><td style="text-align: left">Type III</td><td style="text-align: left"><span>$q p q = \pm p$</span> for a fixed string <code>q</code></td><td style="text-align: left"><a href="../api/#RedCarD.typeIII"><code>typeIII</code></a></td></tr></table><pre><code class="language-julia-repl hljs">julia&gt; split = cartandecomp(closure, evenoddy);
+
+julia&gt; tostring(split.k), tostring(split.m)
+([&quot;-Y&quot;, &quot;Y-&quot;], [&quot;X-&quot;, &quot;-X&quot;, &quot;Z-&quot;, &quot;-Z&quot;])
+
+julia&gt; tostring(split.h)
+2-element Vector{String}:
+ &quot;X-&quot;
+ &quot;-X&quot;</code></pre><p>The conjugating-string involutions need the string supplied, so wrap them:</p><pre><code class="language-julia-repl hljs">julia&gt; other = cartandecomp(closure, p -&gt; typeIII(p, UPauli(&quot;ZZ&quot;)));
+
+julia&gt; tostring(other.k)
+2-element Vector{String}:
+ &quot;Z-&quot;
+ &quot;-Z&quot;</code></pre><p>A decomposition is only useful when the Hamiltonian lands entirely in <span>$\mathfrak{m}$</span>, which is a property of the involution <em>and</em> of the model. Picking one that works is the reason for the next section.</p><h2 id="Decomposition-without-an-involution"><a class="docs-heading-anchor" href="#Decomposition-without-an-involution">Decomposition without an involution</a><a id="Decomposition-without-an-involution-1"></a><a class="docs-heading-anchor-permalink" href="#Decomposition-without-an-involution" title="Permalink"></a></h2><p><a href="../api/#RedCarD.involutionlessdecomp"><code>involutionlessdecomp</code></a> sidesteps the search. It closes the algebra while carrying a sign per element — <span>$-1$</span> for everything the Hamiltonian generates, and the product of signs through every commutator — which is exactly the condition <span>$[\mathfrak{m},\mathfrak{m}] \subseteq \mathfrak{k}$</span> written out. If no string is ever reached with both signs, the result is a genuine Cartan decomposition that keeps the Hamiltonian in <span>$\mathfrak{m}$</span> by construction.</p><pre><code class="language-julia-repl hljs">julia&gt; H = hamiltonian(&quot;TFIM&quot;, 4, [1.0, 0.5]);
+
+julia&gt; decomposition = involutionlessdecomp(PauliList(collect(keys(H)), 4));
+
+julia&gt; length(decomposition.k), length(decomposition.m)
+(12, 16)</code></pre><p>When a contradiction <em>is</em> found, no such decomposition exists; <code>k</code> and <code>m</code> come back as <code>nothing</code>, and <code>g</code> and <code>h</code> still describe the closed algebra and a commuting subalgebra of it:</p><pre><code class="language-julia-repl hljs">julia&gt; failed = involutionlessdecomp(PauliList([&quot;X-&quot;, &quot;Y-&quot;, &quot;Z-&quot;]));
+
+julia&gt; failed.k === nothing, failed.m === nothing
+(true, true)
+
+julia&gt; length(failed.g)
+3</code></pre><h2 id="Reductive-decompositions"><a class="docs-heading-anchor" href="#Reductive-decompositions">Reductive decompositions</a><a id="Reductive-decompositions-1"></a><a class="docs-heading-anchor-permalink" href="#Reductive-decompositions" title="Permalink"></a></h2><p>The reductive scheme rotates into the Cartan subalgebra one generator at a time rather than all at once. It needs two things: a multiplicative generating set for <span>$\mathfrak{h}$</span>, and the pieces of <span>$\mathfrak{k}$</span> that act on each of them.</p><p><a href="../api/#RedCarD.subalgred"><code>subalgred</code></a> reduces <span>$\mathfrak{h}$</span> to the strings whose products span it:</p><pre><code class="language-julia-repl hljs">julia&gt; h = PauliList([&quot;Z--&quot;, &quot;-Z-&quot;, &quot;ZZ-&quot;, &quot;--Z&quot;, &quot;Z-Z&quot;, &quot;-ZZ&quot;, &quot;ZZZ&quot;]);
+
+julia&gt; tostring(subalgred(h))
+3-element Vector{String}:
+ &quot;Z--&quot;
+ &quot;-Z-&quot;
+ &quot;--Z&quot;</code></pre><p><a href="../api/#RedCarD.fragmentedsubspaces"><code>fragmentedsubspaces</code></a> then splits <span>$\mathfrak{k}$</span> by which generator each element first fails to commute with, and <a href="../api/#RedCarD.cleangenerators!"><code>cleangenerators!</code></a> drops the generators that end up with nothing to act on:</p><pre><code class="language-julia-repl hljs">julia&gt; bstrings = subalgred(decomposition.h);
+
+julia&gt; fragments = fragmentedsubspaces(decomposition.k, bstrings);
+
+julia&gt; length.(fragments)
+4-element Vector{Int64}:
+ 6
+ 4
+ 2
+ 0
+
+julia&gt; cleangenerators!(fragments, bstrings);
+
+julia&gt; length.(fragments), length(bstrings)
+([6, 4, 2], 3)</code></pre><p>These are exactly the inputs <a href="../api/#RedCarD.reductive_optimizer"><code>reductive_optimizer</code></a> expects.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../tutorial/">« Tutorial</a><a class="docs-footer-nextpage" href="../optimization/">Finding the circuit »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Tuesday 18 August 2026 19:36">Tuesday 18 August 2026</span>. Using Julia version 1.12.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
