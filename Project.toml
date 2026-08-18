@@ -1,6 +1,6 @@
 name = "RedCarD"
 uuid = "ab205724-bc94-4f9d-9de2-3802b5d24b63"
-version = "0.2.0"
+version = "0.1.0"
 authors = ["Omar Alsheikh"]
 
 [workspace]
