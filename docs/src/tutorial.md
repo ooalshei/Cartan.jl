@@ -210,11 +210,11 @@ optimizer capped at 20000 sweeps:
 | Qubits | $\dim\mathfrak{g}$ | $\dim\mathfrak{k}$ | one-shot sweeps | cost evaluations | time | error | reductive sweeps | cost evaluations | time | error |
 |--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
 | 4 | 28 | 12 | 1780 | 64080 | 0.017 s | 9.1e-9 | 90 | 1320 | 0.0004 s | 1.0e-9 |
-| 6 | 66 | 30 | 20000<sup>†</sup> | 1800000 | 0.81 s | 1.6e-2 | 240 | 5580 | 0.0022 s | 9.3e-9 |
-| 8 | 120 | 56 | 20000<sup>†</sup> | 3360000 | 1.91 s | 1.2e-2 | 450 | 13920 | 0.0073 s | 6.7e-9 |
-| 10 | 190 | 90 | 20000<sup>†</sup> | 5400000 | 4.63 s | 4.1e-3 | 800 | 32460 | 0.026 s | 8.8e-9 |
+| 6 | 66 | 30 | 20000$^\dagger$ | 1800000 | 0.81 s | 1.6e-2 | 240 | 5580 | 0.0022 s | 9.3e-9 |
+| 8 | 120 | 56 | 20000$^\dagger$ | 3360000 | 1.91 s | 1.2e-2 | 450 | 13920 | 0.0073 s | 6.7e-9 |
+| 10 | 190 | 90 | 20000$^\dagger$ | 5400000 | 4.63 s | 4.1e-3 | 800 | 32460 | 0.026 s | 8.8e-9 |
 
-<sup>†</sup> hit the iteration cap without reaching the tolerance, from all three starts.
+$^\dagger$ hit the iteration cap without reaching the tolerance, from all three starts.
 
 The reductive algorithm converges at every size tested, and where both converge it needs
 about 20× fewer sweeps and 50× fewer cost evaluations. The gap widens with system size,

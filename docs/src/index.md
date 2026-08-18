@@ -164,11 +164,11 @@ Same model, same tolerance, best of three random starts (one-shot capped at 2000
 | Qubits | $\dim \mathfrak{k}$ | one-shot sweeps | error | reductive sweeps | error |
 |--:|--:|--:|--:|--:|--:|
 | 4 | 12 | 1780 | 9.1e-9 | 90 | 1.0e-9 |
-| 6 | 30 | 20000<sup>†</sup> | 1.6e-2 | 240 | 9.3e-9 |
-| 8 | 56 | 20000<sup>†</sup> | 1.2e-2 | 450 | 6.7e-9 |
-| 10 | 90 | 20000<sup>†</sup> | 4.1e-3 | 800 | 8.8e-9 |
+| 6 | 30 | 20000$^\dagger$ | 1.6e-2 | 240 | 9.3e-9 |
+| 8 | 56 | 20000$^\dagger$ | 1.2e-2 | 450 | 6.7e-9 |
+| 10 | 90 | 20000$^\dagger$ | 4.1e-3 | 800 | 8.8e-9 |
 
-<sup>†</sup> hit the cap without reaching the tolerance. Both routes produce the same circuit depth;
+$^\dagger$ hit the cap without reaching the tolerance. Both routes produce the same circuit depth;
 only one of them gets there. The [Tutorial](@ref) walks through both and checks that the
 factorization really does reproduce `H`.
 
