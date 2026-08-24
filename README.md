@@ -31,12 +31,9 @@ subalgebra, and solves for the angles.
 
 ## Installation
 
-Neither package is registered, so install the dependency first:
-
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/ooalshei/SymplecticPauli.jl")
-Pkg.add(url="https://github.com/ooalshei/RedCarD.jl")
+Pkg.add("RedCarD")
 ```
 
 ## Example
